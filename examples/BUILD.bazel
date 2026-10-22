@@ -3,7 +3,10 @@ load("@rules_go//go:def.bzl", "go_test")
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("//bazel:defs.bzl", "proto_diff_library")
 
-exports_files(["team.diff.textproto"])
+exports_files([
+    "team.diff.textproto",
+    "team_diff.proto",
+])
 
 # Writes team_diff.proto from the design's sample config.
 proto_diff_library(

@@ -116,6 +116,7 @@ func Build(sources map[string]string, config []byte) (*Schema, error) {
 		return protocompile.SearchResult{}, fs.ErrNotExist
 	}))
 	c := protocompile.Compiler{
+		SourceInfoMode: protocompile.SourceInfoStandard,
 		Resolver: protocompile.ResolverFunc(func(path string) (protocompile.SearchResult, error) {
 			switch {
 			case path == diffPath:

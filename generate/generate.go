@@ -103,16 +103,17 @@ func dedupe(set *descriptorpb.FileDescriptorSet) *descriptorpb.FileDescriptorSet
 
 // message is a generated message.
 type message struct {
-	name    string
-	full    protoreflect.FullName
-	source  protoreflect.FullName
-	kind    schema.Kind // 0 for a message with no change option
-	comment []string
-	fields  []*field
-	oneofs  []string
-	nested  []*message
-	top     bool
-	origin  string // what made it, for errors
+	name     string
+	full     protoreflect.FullName
+	source   protoreflect.FullName
+	kind     schema.Kind // 0 for a message with no change option
+	comment  []string
+	fields   []*field
+	oneofs   []string
+	oneofDoc map[int][]string // comments on oneofs, by index
+	nested   []*message
+	top      bool
+	origin   string // what made it, for errors
 }
 
 // field is a generated field.
@@ -161,12 +162,13 @@ func (g *gen) body(md protoreflect.MessageDescriptor) *message {
 	}
 	name := strings.ReplaceAll(strings.TrimPrefix(string(md.FullName()), string(md.ParentFile().Package())+"."), ".", "_") + "Diff"
 	m := &message{
-		name:   name,
-		full:   g.cfg.pkg.Append(protoreflect.Name(name)),
-		source: md.FullName(),
-		kind:   schema.KindPatch,
-		top:    true,
-		origin: "the patch body for " + string(md.FullName()),
+		name:    name,
+		full:    g.cfg.pkg.Append(protoreflect.Name(name)),
+		source:  md.FullName(),
+		kind:    schema.KindPatch,
+		comment: []string{fmt.Sprintf("A change to %s. An unset field leaves its value unchanged.", md.FullName())},
+		top:     true,
+		origin:  "the patch body for " + string(md.FullName()),
 	}
 	g.bodies[md.FullName()] = m
 	if prev, ok := g.names[name]; ok {
@@ -199,10 +201,11 @@ func (g *gen) fill(m *message, md protoreflect.MessageDescriptor) {
 			origin: "field " + string(fd.FullName()),
 		}
 		if o := fd.ContainingOneof(); o != nil && !o.IsSynthetic() {
-			f.oneof = m.oneof(string(o.Name()))
+			f.oneof = m.oneof(string(o.Name()), fmt.Sprintf("The cases of %s. Setting a case unlike the base's replaces the oneof.", o.FullName()))
 		}
 		switch {
 		case fd.IsMap():
+			f.comment = []string{fmt.Sprintf("Changes to %s, one per changed map key.", fd.FullName())}
 			g.mapField(m, f, fd)
 		case fd.IsList():
 			r := g.cfg.rules[fd.FullName()]
@@ -216,23 +219,28 @@ func (g *gen) fill(m *message, md protoreflect.MessageDescriptor) {
 			}
 			switch strategy {
 			case schema.StrategyKeyed:
+				f.comment = []string{fmt.Sprintf("Changes to %s, one per changed key.", fd.FullName())}
 				g.keyedField(m, f, fd, r)
 				if r.ordered {
 					ordered = append(ordered, r)
 				}
 			case schema.StrategyIndexed:
+				f.comment = []string{fmt.Sprintf("Edits to %s, by base index.", fd.FullName())}
 				g.indexedField(m, f, fd)
 			default:
+				f.comment = []string{fmt.Sprintf("Sets %s whole when present.", fd.FullName())}
 				g.replaceField(m, f, fd)
 			}
 		case fd.Message() != nil:
 			if g.atomicType(fd.Message()) || g.cfg.atomicFields[fd.FullName()] {
 				g.setType(f, fd)
-				f.comment = []string{`Atomic: present means "set to this".`}
+				f.comment = []string{fmt.Sprintf("Sets %s whole when present: it is atomic.", fd.FullName())}
 			} else {
+				f.comment = []string{fmt.Sprintf("Patches %s, starting from empty if it is unset.", fd.FullName())}
 				g.genType(f, g.body(fd.Message()))
 			}
 		default:
+			f.comment = []string{fmt.Sprintf("Sets %s when present.", fd.FullName())}
 			g.setType(f, fd)
 			f.features = features(fd)
 		}
@@ -275,26 +283,31 @@ func (g *gen) fill(m *message, md protoreflect.MessageDescriptor) {
 func (g *gen) keyedField(m *message, f *field, fd protoreflect.FieldDescriptor, r *rule) {
 	item := fd.Message()
 	w := g.wrapper(m, fd, "Change", schema.KindListChange)
+	w.comment = []string{fmt.Sprintf("A change to one item of %s, matched by %s.", fd.FullName(), r.key.Name())}
 	key := &field{
 		name:     string(r.key.Name()),
 		number:   1,
 		oneof:    -1,
+		comment:  []string{"The key of the item this changes."},
 		source:   ptr(schema.NewFieldSource(r.key.FullName(), true, false, false)),
 		features: features(r.key),
 		origin:   "the key field " + string(r.key.FullName()),
 	}
 	g.setType(key, r.key)
-	op := w.oneof("op")
-	add := &field{name: "add", number: 2, oneof: op, origin: "the add field"}
+	op := w.oneof("op", "What the change does.")
+	add := &field{name: "add", number: 2, oneof: op, origin: "the add field",
+		comment: []string{fmt.Sprintf("Adds the item. Its %s must equal the key.", r.key.Name())}}
 	g.refMessage(add, item)
 	patch := &field{name: "patch", number: 4, oneof: op, origin: "the patch field"}
 	if g.atomicType(item) {
+		patch.comment = []string{"Replaces the item whole. It may not change the key."}
 		g.refMessage(patch, item)
 	} else {
+		patch.comment = []string{"Patches the item. It may not change the key."}
 		g.genType(patch, g.body(item))
 		g.keyed = append(g.keyed, r)
 	}
-	w.fields = []*field{key, add, g.removeField(op), patch}
+	w.fields = []*field{key, add, g.removeField(op, "Removes the item."), patch}
 	f.repeated = true
 	g.genType(f, w)
 }
@@ -302,26 +315,29 @@ func (g *gen) keyedField(m *message, f *field, fd protoreflect.FieldDescriptor, 
 func (g *gen) mapField(m *message, f *field, fd protoreflect.FieldDescriptor) {
 	k, v := fd.MapKey(), fd.MapValue()
 	w := g.wrapper(m, fd, "Change", schema.KindListChange)
+	w.comment = []string{fmt.Sprintf("A change to one key of %s.", fd.FullName())}
 	key := &field{
 		name:     "key",
 		number:   1,
 		oneof:    -1,
+		comment:  []string{"The map key this changes."},
 		source:   ptr(schema.NewFieldSource(k.FullName(), true, false, false)),
 		features: features(k),
 		origin:   "the map key",
 	}
 	g.setType(key, k)
-	op := w.oneof("op")
+	op := w.oneof("op", "What the change does.")
+	remove := g.removeField(op, "Removes the key.")
 	if v.Message() != nil && !g.atomicType(v.Message()) {
-		add := &field{name: "add", number: 2, oneof: op, origin: "the add field"}
+		add := &field{name: "add", number: 2, oneof: op, origin: "the add field", comment: []string{"Adds this value at a key the map lacks."}}
 		g.refMessage(add, v.Message())
-		patch := &field{name: "patch", number: 4, oneof: op, origin: "the patch field"}
+		patch := &field{name: "patch", number: 4, oneof: op, origin: "the patch field", comment: []string{"Patches the value at the key."}}
 		g.genType(patch, g.body(v.Message()))
-		w.fields = []*field{key, add, g.removeField(op), patch}
+		w.fields = []*field{key, add, remove, patch}
 	} else {
-		set := &field{name: "set", number: 2, oneof: op, features: features(v), origin: "the set field"}
+		set := &field{name: "set", number: 2, oneof: op, features: features(v), origin: "the set field", comment: []string{"Sets the value at the key, whether or not the map has it."}}
 		g.setType(set, v)
-		w.fields = []*field{key, set, g.removeField(op)}
+		w.fields = []*field{key, set, remove}
 	}
 	f.repeated = true
 	g.genType(f, w)
@@ -329,6 +345,7 @@ func (g *gen) mapField(m *message, f *field, fd protoreflect.FieldDescriptor) {
 
 func (g *gen) indexedField(m *message, f *field, fd protoreflect.FieldDescriptor) {
 	w := g.wrapper(m, fd, "Edit", schema.KindListEdit)
+	w.comment = []string{fmt.Sprintf("An edit to %s at one base index.", fd.FullName())}
 	index := &field{
 		name:    "index",
 		number:  1,
@@ -338,8 +355,8 @@ func (g *gen) indexedField(m *message, f *field, fd protoreflect.FieldDescriptor
 		source:  ptr(schema.NewFieldSource(fd.FullName(), false, false, true)),
 		origin:  "the index field",
 	}
-	op := w.oneof("op")
-	patch := &field{name: "patch", number: 2, oneof: op, origin: "the patch field"}
+	op := w.oneof("op", "What the edit does.")
+	patch := &field{name: "patch", number: 2, oneof: op, origin: "the patch field", comment: []string{"Replaces the element at index."}}
 	switch {
 	case fd.Message() == nil:
 		g.setType(patch, fd)
@@ -347,6 +364,7 @@ func (g *gen) indexedField(m *message, f *field, fd protoreflect.FieldDescriptor
 	case g.atomicType(fd.Message()):
 		g.refMessage(patch, fd.Message())
 	default:
+		patch.comment = []string{"Patches the element at index."}
 		g.genType(patch, g.body(fd.Message()))
 	}
 	inserted := &message{
@@ -355,21 +373,22 @@ func (g *gen) indexedField(m *message, f *field, fd protoreflect.FieldDescriptor
 		comment: []string{"The elements inserted, in order."},
 		origin:  "the Inserted message for " + string(fd.FullName()),
 	}
-	items := &field{name: "items", number: 1, repeated: true, oneof: -1, features: features(fd), origin: "the items field"}
+	items := &field{name: "items", number: 1, repeated: true, oneof: -1, features: features(fd), origin: "the items field", comment: []string{"The elements, in order."}}
 	g.setType(items, fd)
 	inserted.fields = []*field{items}
 	w.nested = []*message{inserted}
-	insert := &field{name: "insert_before", number: 4, oneof: op, origin: "the insert_before field"}
+	insert := &field{name: "insert_before", number: 4, oneof: op, origin: "the insert_before field",
+		comment: []string{"Inserts elements before the element at index, or at the end when index is n."}}
 	g.genType(insert, inserted)
-	w.fields = []*field{index, patch, g.removeField(op), insert}
+	w.fields = []*field{index, patch, g.removeField(op, "Removes the element at index."), insert}
 	f.repeated = true
 	g.genType(f, w)
 }
 
 func (g *gen) replaceField(m *message, f *field, fd protoreflect.FieldDescriptor) {
 	w := g.wrapper(m, fd, "Replace", schema.KindReplace)
-	w.comment = []string{`Present means "use this list".`}
-	list := &field{name: string(fd.Name()), number: 1, repeated: true, oneof: -1, features: features(fd), origin: "the list field"}
+	w.comment = []string{fmt.Sprintf(`The whole new value of %s. Present means "use this list".`, fd.FullName())}
+	list := &field{name: string(fd.Name()), number: 1, repeated: true, oneof: -1, features: features(fd), origin: "the list field", comment: []string{"The new list, in order."}}
 	g.setType(list, fd)
 	w.fields = []*field{list}
 	g.genType(f, w)
@@ -388,8 +407,8 @@ func (g *gen) wrapper(m *message, fd protoreflect.FieldDescriptor, suffix string
 	return w
 }
 
-func (g *gen) removeField(op int) *field {
-	f := &field{name: "remove", number: 3, oneof: op, origin: "the remove field"}
+func (g *gen) removeField(op int, comment string) *field {
+	f := &field{name: "remove", number: 3, oneof: op, origin: "the remove field", comment: []string{comment}}
 	g.refMessage(f, emptypb.File_google_protobuf_empty_proto.Messages().ByName("Empty"))
 	return f
 }
@@ -418,13 +437,17 @@ func (g *gen) genType(f *field, m *message) {
 	f.gen = true
 }
 
-func (m *message) oneof(name string) int {
+func (m *message) oneof(name, comment string) int {
 	for i, n := range m.oneofs {
 		if n == name {
 			return i
 		}
 	}
 	m.oneofs = append(m.oneofs, name)
+	if m.oneofDoc == nil {
+		m.oneofDoc = map[int][]string{}
+	}
+	m.oneofDoc[len(m.oneofs)-1] = []string{comment}
 	return len(m.oneofs) - 1
 }
 
@@ -433,9 +456,9 @@ func (g *gen) markKeys() {
 	for _, r := range g.keyed {
 		m := g.bodies[r.field.Message().FullName()]
 		for _, f := range m.fields {
-			if f.name == string(r.key.Name()) && f.comment == nil {
+			if f.name == string(r.key.Name()) && len(f.comment) == 1 {
 				item := r.field.Message()
-				f.comment = []string{fmt.Sprintf("Kept, so %s serves wherever %s appears. A patch may not change it.", m.name, item.Name())}
+				f.comment = append(f.comment, fmt.Sprintf("Kept, so %s serves wherever %s appears. A patch may not change it.", m.name, item.Name()))
 			}
 		}
 	}

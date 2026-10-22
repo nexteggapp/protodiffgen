@@ -9,103 +9,179 @@ import "google/protobuf/wrappers.proto";
 import "pdgtest/v1/legacy.proto";
 import "pdgtest/v1/modern.proto";
 
+// An open enum.
 enum Color {
+  // No color.
   COLOR_UNSPECIFIED = 0;
+  // Red.
   COLOR_RED = 1;
+  // Green.
   COLOR_GREEN = 2;
+  // Blue.
   COLOR_BLUE = 3;
 }
 
+// The target of the test config.
 message Root {
+  // A string with implicit presence.
   string name = 1;
+  // An integer with explicit presence.
   optional int64 count = 2;
+  // A double with implicit presence, to test NaN and -0.
   double ratio = 3;
+  // A float with explicit presence.
   optional float weight = 4;
+  // Bytes with implicit presence.
   bytes blob = 5;
+  // A bool with implicit presence.
   bool flag = 6;
+  // An open enum.
   Color color = 7;
+  // A proto2 message, patched.
   Legacy legacy = 8;
+  // An atomic type, set whole.
   Money budget = 9;
+  // A message that is patched.
   Settings settings = 10;
+  // The same type, set whole by atomic_fields.
   Settings frozen = 11;
+  // A well-known type, atomic by default.
   google.protobuf.Timestamp created = 12;
+  // A wrapper type, atomic by default.
   google.protobuf.StringValue note = 13;
+  // A list KEYED by a string, ORDERED.
   repeated Member members = 14;
+  // A list KEYED by an integer, UNORDERED, whose items hold a keyed list.
   repeated Group groups = 15;
+  // A list of messages, INDEXED.
   repeated Line lines = 16;
+  // A list of scalars, INDEXED.
   repeated sint32 scores = 17;
+  // A list of scalars without a rule, replaced whole.
   repeated string tags = 18;
+  // A list of messages, REPLACE.
   repeated Money prices = 19;
+  // A map with scalar values.
   map<string, int32> counts = 20;
+  // A map with message values, patched.
   map<int32, Settings> configs = 21;
+  // A map with atomic values.
   map<string, Money> wallet = 22;
+  // A oneof with a scalar, a patched and an atomic case.
   oneof payment {
+    // A scalar case.
     string cash = 23;
+    // A patched case.
     Card card = 24;
+    // An atomic case.
     Money credit = 25;
   }
+  // A list KEYED by an enum, ORDERED.
   repeated Tagged tagged = 26;
+  // A list of well-known types, INDEXED.
   repeated google.protobuf.Duration waits = 27;
+  // An editions message, patched.
   Modern modern = 28;
+  // A list of atomic items, KEYED by a bool, UNORDERED.
   repeated Coin coins = 29;
+  // A recursive message.
   Node tree = 30;
 }
 
+// An amount of money, atomic in the test config.
 message Money {
+  // The currency code.
   string currency = 1;
+  // The whole units.
   int64 units = 2;
+  // The fractional units.
   int32 nanos = 3;
 }
 
+// Settings, patched in some places and set whole in others.
 message Settings {
+  // A string.
   string theme = 1;
+  // A list of strings, INDEXED.
   repeated string labels = 2;
+  // An open enum.
   Color color = 3;
+  // A map with string values.
   map<string, string> extra = 4;
 }
 
+// An item of Root.members.
 message Member {
+  // The key.
   string id = 1;
+  // A string.
   string name = 2;
+  // An open enum.
   Color color = 3;
+  // A list of messages, INDEXED.
   repeated Line lines = 4;
+  // A proto2 message, patched.
   Legacy legacy = 5;
 }
 
+// An item of Root.groups.
 message Group {
+  // The key.
   int64 number = 1;
+  // A string.
   string title = 2;
+  // A nested list KEYED by a string, ORDERED.
   repeated Seat seats = 3;
 
+  // An item of Group.seats, a nested type.
   message Seat {
+    // The key.
     string code = 1;
+    // An integer.
     int32 row = 2;
+    // A bool with explicit presence.
     optional bool aisle = 3;
   }
 }
 
+// An element of the INDEXED lists.
 message Line {
+  // A string.
   string text = 1;
+  // An integer.
   int32 qty = 2;
 }
 
+// The patched case of Root.payment.
 message Card {
+  // A string.
   string holder = 1;
+  // An atomic field.
   Money limit = 2;
 }
 
+// An item of Root.tagged.
 message Tagged {
+  // The key, an enum.
   Color color = 1;
+  // A string.
   string note = 2;
 }
 
+// An item of Root.coins, atomic in the test config.
 message Coin {
+  // The key, a bool.
   bool heads = 1;
+  // An integer.
   uint32 value = 2;
 }
 
+// A recursive message.
 message Node {
+  // The key of Node.children.
   string id = 1;
+  // A double.
   double weight = 2;
+  // A list of nodes, KEYED by id, UNORDERED.
   repeated Node children = 3;
 }

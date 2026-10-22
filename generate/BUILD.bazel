@@ -29,15 +29,19 @@ go_test(
     srcs = ["generate_test.go"],
     data = glob(["testdata/**"]) + [
         "//examples:team.diff.textproto",
+        "//examples:team_diff.proto",
         "//examples/example/v1:team.proto",
+        "//internal/testschema:protos",
         "//v1:config.proto",
     ],
     deps = [
         ":generate",
         "//internal/schema",
         "//internal/testschema",
+        "@com_github_bufbuild_protocompile//:protocompile",
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
     ],
 )
 

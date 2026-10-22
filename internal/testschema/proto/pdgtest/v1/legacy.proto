@@ -4,21 +4,32 @@ syntax = "proto2";
 
 package pdgtest.v1;
 
-// Closed: it has no zero value, and unknown numbers are not kept.
+// A closed enum: it has no zero value, and unknown numbers are not kept.
 enum Level {
+  // The first value, and so the default.
   LEVEL_LOW = 1;
+  // The second value.
   LEVEL_HIGH = 2;
 }
 
+// A proto2 message, reached from Root and Member.
 message Legacy {
+  // A string with explicit presence and no UTF-8 check.
   optional string label = 1;
+  // A closed enum with explicit presence.
   optional Level level = 2;
+  // A repeated scalar with expanded encoding, replaced whole.
   repeated int32 codes = 3;
+  // A list KEYED by an optional key, ORDERED.
   repeated Entry entries = 4;
+  // A list of closed enum values, INDEXED.
   repeated Level levels = 5;
 
+  // An item keyed by an optional field.
   message Entry {
+    // The key, which an item must set.
     optional string key = 1;
+    // A value with explicit presence.
     optional int32 value = 2;
   }
 }

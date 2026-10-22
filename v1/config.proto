@@ -7,80 +7,234 @@ import "google/protobuf/descriptor.proto";
 
 option go_package = "github.com/nexteggapp/protodiffgen/v1;protodiffgenv1";
 
+// How to generate the diff messages for one target message. Write it as
+// textproto and give it to the protodiffgen CLI with --config, or to
+// proto_diff_library as `config`. The generator reads it with the target's
+// descriptors and writes one .proto file. Any mistake in it, such as a name
+// that doesn't exist or a repeated message field with no rule, fails the
+// build with an error that names the config entry or the source field.
 message DiffConfig {
-  // The full name of the target, such as "example.v1.Team".
+  // The full name of the message being diffed, such as "example.v1.Team".
+  // The generator writes a patch body for it, such as TeamDiff, and for every
+  // message type it reaches that isn't atomic. The build fails if the name
+  // doesn't exist, isn't a message, or is atomic.
   string target_message = 1;
-  // The package the generated messages go in.
+
+  // The proto package of the generated file, such as "example.v1.diff".
+  // Patch bodies go at its top level, named from the source type's nested
+  // path: example.v1.Team gives TeamDiff, and PlannedSale.Holding gives
+  // PlannedSale_HoldingDiff. It may be the target's own package, but the
+  // build fails if a patch body name is already taken there.
   string output_package = 2;
-  // Options for the generated file, such as go_package.
+
+  // File options for the generated file, such as go_package or
+  // java_package. Each set field is written as an `option` line, and an
+  // option from an extension also imports the file that declares it.
+  // Language rules such as go_proto_library still set their own import path.
+  // `features` is refused, because each generated field sets its own.
   google.protobuf.FileOptions file_options = 3;
-  // Message types always set whole, wherever they appear. Every
-  // google.protobuf type is atomic without being listed.
+
+  // Message types that are always set whole, wherever they appear, such as
+  // a money amount or a date whose parts change together. A field of an
+  // atomic type is typed with the type itself, not a patch body. Diff sets
+  // the whole value whenever it differs, and Apply replaces the old value
+  // with it. The generator doesn't look inside an atomic type, so its
+  // repeated fields need no list rule. Every google.protobuf type is atomic
+  // without being listed. The build fails if an entry isn't a message.
   repeated string atomic_types = 4;
-  // Singular fields, by full name, always set whole.
+
+  // Singular message fields, by full name, that are always set whole, such
+  // as "example.v1.Team.budget". This works like atomic_types for one field
+  // only: the field's type is still patched where it appears elsewhere. Use
+  // it when one use of a type changes as a unit and others don't. The build
+  // fails if an entry doesn't exist or is repeated; a REPLACE list rule sets
+  // a repeated field whole.
   repeated string atomic_fields = 5;
-  // One rule per repeated message field the target reaches.
+
+  // How each list is matched, one rule per field. Every repeated message
+  // field the target reaches needs one, except a map, which is always keyed
+  // by its map key. A repeated scalar without a rule is replaced whole. The
+  // build fails on a missing rule, two rules for one field, or a rule for a
+  // map or a singular field. A rule for a field the target doesn't reach is
+  // ignored.
   repeated ListRule lists = 6;
-  // The name of the generated field that lists cleared fields. Default "clear".
+
+  // The name of the field, in every patch body, that lists the numbers of
+  // fields to unset. It is `repeated int32`, numbered 536870911. Default
+  // "clear". Change it if a target type has a field of that name, which
+  // otherwise fails the build. Validate refuses a diff that clears a field
+  // without explicit presence; set such a field to its zero value instead.
   string clear_field_name = 7;
 }
 
+// How a diff changes one repeated field: by key, by position, or whole. A
+// repeated message field the target reaches needs one. A repeated scalar may
+// have one, to make it INDEXED; without one it is replaced whole.
 message ListRule {
+  // How a diff names the items of a list it changes.
   enum Strategy {
+    // Not set. The build fails for a rule without a strategy; every rule
+    // must choose KEYED, INDEXED or REPLACE.
     STRATEGY_UNSPECIFIED = 0;
-    // Items are matched by `key`.
+
+    // Items are matched by `key`, one of their own fields, such as a
+    // member's id. The generator writes a change wrapper, such as
+    // MembersChange, holding the key and one of add, remove or patch. Diff
+    // writes one change per key that is added, removed or changed, in key
+    // order, and Apply finds each item by its key. A key still names the
+    // same item after other changes, so two diffs made from one base can be
+    // compared item by item with Overlap. Choose this when items have an
+    // identity of their own. The items must be messages.
     KEYED = 1;
-    // Edits name positions in the base list.
+
+    // Edits name positions in the base list. The generator writes an edit
+    // wrapper, such as AddressesEdit, holding a base index and one of patch,
+    // remove or insert_before. Diff runs a Myers sequence diff, comparing
+    // elements with Equal, and turns each removed element that is followed
+    // by an added one into a patch. Apply walks the base list once, putting
+    // an insert at index i before base element i. Choose this for long lists
+    // whose items have no identity, where replacing the whole list for one
+    // edit would be wasteful. A diff applies correctly only to the base it
+    // was made from. Validate refuses an index out of range, two inserts at
+    // one index, a patch and a remove at one index, and an empty insert.
     INDEXED = 3;
-    // The list is set whole.
+
+    // The list is set whole. The generator writes a wrapper, such as
+    // TagsReplace, whose presence means "use this list". Diff sets it when
+    // the lists differ in any element, and Apply replaces the old list with
+    // it. The generator doesn't look inside the items, so they need no list
+    // rules. Choose this for short lists. It is what a repeated scalar gets
+    // without a rule.
     REPLACE = 2;
   }
+
+  // Whether the order of a KEYED list's items is part of its value.
   enum Order {
+    // Not set. The build fails for a KEYED rule without an order. INDEXED
+    // and REPLACE rules must leave it unset, since their order is always
+    // part of the list's value.
     ORDER_UNSPECIFIED = 0;
-    // The items' order means something, and a diff can change it.
+
+    // The order of the items is part of the message's meaning, as with the
+    // steps of a recipe. The generator adds a `<field>_order` field to the
+    // patch body that holds the list, holding keys. Without it, Apply keeps
+    // surviving items in their base order and puts added items after them,
+    // in key order. Diff writes the complete final order of keys there only
+    // when the final order differs from that, and Apply rearranges the items
+    // to match it. Validate refuses an order that doesn't name each
+    // resulting key exactly once. Choose this when reordering the items is
+    // itself a change someone makes.
     ORDERED = 1;
-    // The list is a set.
+
+    // The order of the items carries no meaning, as with the members of a
+    // team. Diff ignores order, and Equal compares the lists as sets. Apply
+    // keeps surviving items in their base order and puts added items after
+    // them, in key order. Choose this when items are only ever added,
+    // removed or changed.
     UNORDERED = 2;
   }
-  // The repeated field's full name, such as "example.v1.Team.members".
+
+  // The repeated field's full name, such as "example.v1.Team.members". The
+  // build fails if it doesn't exist, isn't repeated, or is a map.
   string field = 1;
+
+  // How a diff names the items it changes. Required.
   Strategy strategy = 2;
-  // For KEYED: a singular string, integer, bool or enum field of the item.
+
+  // For KEYED only: the name of the item's field that identifies it, such as
+  // "id". It must be a singular string, integer, bool or enum field; the
+  // build fails otherwise, and if it is set for INDEXED or REPLACE. The
+  // change wrapper's key has its type, and an enum key is compared by
+  // number. Diff and Validate refuse a list where two items share a key, or
+  // where an optional key is unset. Validate refuses an add whose item has a
+  // different key from its wrapper, or leaves an optional key unset, and a
+  // patch that changes the key.
   string key = 3;
-  // Required for KEYED.
+
+  // For KEYED only, and required there: whether the items' order is part of
+  // the value. The build fails if it is set for INDEXED or REPLACE.
   Order order = 4;
 }
 
-// Where a generated message came from.
+// Where a generated message came from. protodiffgen sets it on every
+// generated message except an indexed edit's Inserted, and the runtime
+// reads it from the message's options to know how to diff and apply. A
+// message field of a patch body without it holds a source type, set whole.
 message Change {
+  // What a generated message is.
   enum Kind {
+    // Not set. protodiffgen never writes it. The runtime treats a field
+    // whose message type has this kind, or no change option at all, as a
+    // source type that is set whole, and refuses such a message as a diff.
     KIND_UNSPECIFIED = 0;
+
+    // A patch body: a change to one message type, such as TeamDiff for
+    // example.v1.Team. There is one for the target and for each message type
+    // it reaches that isn't atomic, and one serves wherever its type appears.
+    // It holds the source fields with their names and numbers, each with
+    // explicit presence, plus a clear field and an order field per ORDERED
+    // list. The runtime diffs, applies and validates field by field: a set
+    // scalar or atomic field replaces the value, a set patch-body field
+    // patches it, and an unset field changes nothing.
     PATCH = 1;
+
+    // A change wrapper for one item of a KEYED list or one key of a map, such
+    // as MembersChange. It holds the key and, in its op oneof, add, remove or
+    // patch; for a map whose values are scalars or atomic, set or remove. The
+    // runtime finds the item by the key, and refuses an add for a key the
+    // list has, a remove or patch for one it lacks, and two wrappers for one
+    // key.
     LIST_CHANGE = 2;
+
+    // A wrapper that sets a list whole, such as TagsReplace. It holds the
+    // whole new list. When it is present, the runtime replaces the list with
+    // it, even when it is empty.
     REPLACE = 3;
+
+    // An edit wrapper for one base index of an INDEXED list, such as
+    // AddressesEdit. It holds the index and, in its op oneof, patch, remove
+    // or insert_before. The runtime applies all edits in one walk of the
+    // base list, so their order in the diff doesn't matter.
     LIST_EDIT = 4;
   }
-  // The full name of the message or field it diffs.
+
+  // The full name of what the message diffs: a message type for a patch
+  // body, such as "example.v1.Team", or a list field for a wrapper, such as
+  // "example.v1.Team.members".
   string source = 1;
+
+  // What the generated message is.
   Kind kind = 2;
 }
 
-// Where a generated field came from.
+// Where a generated field came from. protodiffgen sets it on every field of a
+// patch body except the clear field, and on a wrapper's key or index. The
+// runtime reads it from the field's options. The fields inside a wrapper's
+// op oneof carry none; they are found by name.
 message FieldSource {
-  // The full name of the source field.
+  // The full name of the source field: the field itself in a patch body,
+  // the item's key field for a key, and the list field for an order or an
+  // index.
   string source = 1;
+
   // This is a change wrapper's key.
   bool key = 2;
-  // This holds a list's final key order.
+
+  // This is a patch body's `<field>_order` field, holding a list's final
+  // key order.
   bool order = 3;
+
   // This is an indexed edit's base index.
   bool index = 4;
 }
 
-// One placeholder number for both, until registered.
+// 52000 is a placeholder number, on both extendees, until one is registered
+// in protobuf's global extension registry.
 extend google.protobuf.MessageOptions {
+  // Where a generated message came from, and what it is.
   Change change = 52000;
 }
 extend google.protobuf.FieldOptions {
+  // Where a generated field came from.
   FieldSource field = 52000;
 }

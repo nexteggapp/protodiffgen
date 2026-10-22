@@ -1,13 +1,20 @@
 package generate_test
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/bufbuild/protocompile"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/nexteggapp/protodiffgen/generate"
 	"github.com/nexteggapp/protodiffgen/internal/schema"
@@ -48,6 +55,7 @@ func TestGoldenTeam(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkGolden(t, s.Text(), "testdata/team_diff.proto.golden")
+	checkDocumented(t, s.Diff())
 }
 
 // TestGoldenTestSchema checks the output for the test schema, which reaches
@@ -58,6 +66,7 @@ func TestGoldenTestSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkGolden(t, s.Text(), "testdata/pdgtest_diff.proto.golden")
+	checkDocumented(t, s.Diff())
 }
 
 // TestConfigDescriptor checks the descriptor built in Go against
@@ -266,5 +275,118 @@ func TestNames(t *testing.T) {
 func TestCLIErrorsAreClear(t *testing.T) {
 	if _, err := generate.File(nil, []byte(`target_message: "a.B" output_package: "c"`)); err == nil || !strings.Contains(err.Error(), `message "a.B" doesn't exist`) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// checkDocumented fails for each message, field, oneof, enum, enum value or
+// extension in fd without a leading comment.
+func checkDocumented(t *testing.T, fd protoreflect.FileDescriptor) {
+	t.Helper()
+	locs := fd.SourceLocations()
+	check := func(d protoreflect.Descriptor) {
+		if strings.TrimSpace(locs.ByDescriptor(d).LeadingComments) == "" {
+			t.Errorf("%s: %s has no doc comment", fd.Path(), d.FullName())
+		}
+	}
+	var enums func(protoreflect.EnumDescriptors)
+	enums = func(es protoreflect.EnumDescriptors) {
+		for i := 0; i < es.Len(); i++ {
+			check(es.Get(i))
+			for j := 0; j < es.Get(i).Values().Len(); j++ {
+				check(es.Get(i).Values().Get(j))
+			}
+		}
+	}
+	exts := func(xs protoreflect.ExtensionDescriptors) {
+		for i := 0; i < xs.Len(); i++ {
+			check(xs.Get(i))
+		}
+	}
+	var messages func(protoreflect.MessageDescriptors)
+	messages = func(ms protoreflect.MessageDescriptors) {
+		for i := 0; i < ms.Len(); i++ {
+			md := ms.Get(i)
+			if md.IsMapEntry() {
+				continue
+			}
+			check(md)
+			for j := 0; j < md.Fields().Len(); j++ {
+				check(md.Fields().Get(j))
+			}
+			for j := 0; j < md.Oneofs().Len(); j++ {
+				if !md.Oneofs().Get(j).IsSynthetic() {
+					check(md.Oneofs().Get(j))
+				}
+			}
+			enums(md.Enums())
+			exts(md.Extensions())
+			messages(md.Messages())
+		}
+	}
+	messages(fd.Messages())
+	enums(fd.Enums())
+	exts(fd.Extensions())
+}
+
+// importRoots maps each directory of .proto files to the import path prefix
+// its files have.
+var importRoots = []struct{ dir, prefix string }{
+	{"v1", "nextgui.xyz/protodiffgen/v1"},
+	{"internal/testschema/proto", ""},
+	{"examples", ""},
+}
+
+// TestProtosAreDocumented parses every .proto in the repository, with source
+// info, and checks that every element has a doc comment.
+func TestProtosAreDocumented(t *testing.T) {
+	var paths []string
+	err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && (strings.HasPrefix(d.Name(), "bazel-") || d.Name() == ".git") {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".proto") {
+			return nil
+		}
+		rel := filepath.ToSlash(strings.TrimPrefix(path, ".."+string(filepath.Separator)))
+		for _, r := range importRoots {
+			if rest, ok := strings.CutPrefix(rel, r.dir+"/"); ok {
+				paths = append(paths, strings.TrimPrefix(r.prefix+"/"+rest, "/"))
+				return nil
+			}
+		}
+		return fmt.Errorf("%s is in no import root; add one to importRoots", rel)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) < 6 {
+		t.Fatalf("found only %v", paths)
+	}
+	c := protocompile.Compiler{
+		SourceInfoMode: protocompile.SourceInfoStandard,
+		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
+			Accessor: func(path string) (io.ReadCloser, error) {
+				for _, r := range importRoots {
+					rest, ok := path, r.prefix == ""
+					if !ok {
+						rest, ok = strings.CutPrefix(path, r.prefix+"/")
+					}
+					if f, err := os.Open(filepath.Join("..", r.dir, rest)); ok && err == nil {
+						return f, nil
+					}
+				}
+				return nil, fs.ErrNotExist
+			},
+		}),
+	}
+	files, err := c.Compile(context.Background(), paths...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		checkDocumented(t, f)
 	}
 }

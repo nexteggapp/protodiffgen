@@ -5,31 +5,50 @@ package example.v1;
 
 option go_package = "example.com/team/v1/teampb";
 
+// A team: the target the sample config diffs.
 message Team {
+  // The team's name.
   string name = 1;
+  // The team's budget, set whole because Money is atomic in the config.
   Money budget = 2;
+  // The members, keyed by id in the config.
   repeated Member members = 3;
+  // Free-form tags, replaced whole.
   repeated string tags = 4;
 }
 
+// A member of a team.
 message Member {
+  // The member's id, the key of Team.members.
   string id = 1;
+  // The member's name.
   string name = 2;
+  // The member's role on the team.
   Role role = 3;
+  // The member's addresses, INDEXED in the config.
   repeated Address addresses = 4;
 }
 
+// A postal address.
 message Address {
+  // The address, on one line.
   string line = 1;
 }
 
+// An amount of money.
 message Money {
+  // The ISO 4217 currency code, such as "USD".
   string currency_code = 1;
+  // The whole units of the amount.
   int64 units = 2;
 }
 
+// A member's role on a team.
 enum Role {
+  // The role is not known.
   ROLE_UNSPECIFIED = 0;
+  // The member leads the team.
   ROLE_LEAD = 1;
+  // The member is on the team.
   ROLE_MEMBER = 2;
 }

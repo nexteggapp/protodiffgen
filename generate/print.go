@@ -95,6 +95,7 @@ func (p *printer) message(m *message, indent int) {
 				p.line(in, "}")
 			}
 			if f.oneof >= 0 {
+				p.comment(in, m.oneofDoc[f.oneof])
 				p.line(in, "oneof %s {", m.oneofs[f.oneof])
 			}
 			open = f.oneof
