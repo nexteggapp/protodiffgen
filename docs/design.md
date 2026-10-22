@@ -205,7 +205,8 @@ lists { field: "example.v1.Team.members" strategy: KEYED key: "id" order: ORDERE
 lists { field: "example.v1.Member.addresses" strategy: INDEXED }
 ```
 
-protodiffgen writes:
+protodiffgen writes the following, which is checked in as
+`examples/team_diff.proto`:
 
 ```proto
 edition = "2023";
@@ -218,66 +219,95 @@ import "nextgui.xyz/protodiffgen/v1/config.proto";
 
 option go_package = "example.com/team/v1/diffpb";
 
+// A change to example.v1.Team. An unset field leaves its value unchanged.
 message TeamDiff {
   option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team" kind: PATCH };
 
+  // Sets example.v1.Team.name when present.
   string name = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.name" }];
-  // Atomic: present means "set to this".
+  // Sets example.v1.Team.budget whole when present: it is atomic.
   example.v1.Money budget = 2 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.budget" }];
+  // Changes to example.v1.Team.members, one per changed key.
   repeated MembersChange members = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" }];
+  // Sets example.v1.Team.tags whole when present.
   TagsReplace tags = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.tags" }];
-  // The members' keys in their final order. Present only when it changed.
+  // The members' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated string members_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" order: true }];
   // Numbers of fields that become unset.
   repeated int32 clear = 536870911;
 
+  // A change to one item of example.v1.Team.members, matched by id.
   message MembersChange {
     option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team.members" kind: LIST_CHANGE };
+    // The key of the item this changes.
     string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.id" key: true }];
+    // What the change does.
     oneof op {
+      // Adds the item. Its id must equal the key.
       example.v1.Member add = 2;
+      // Removes the item.
       google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
       MemberDiff patch = 4;
     }
   }
 
-  // Present means "use this list".
+  // The whole new value of example.v1.Team.tags. Present means "use this list".
   message TagsReplace {
     option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team.tags" kind: REPLACE };
+    // The new list, in order.
     repeated string tags = 1;
   }
 }
 
+// A change to example.v1.Member. An unset field leaves its value unchanged.
 message MemberDiff {
   option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member" kind: PATCH };
 
+  // Sets example.v1.Member.id when present.
   // Kept, so MemberDiff serves wherever Member appears. A patch may not change it.
   string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.id" }];
+  // Sets example.v1.Member.name when present.
   string name = 2 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.name" }];
+  // Sets example.v1.Member.role when present.
   example.v1.Role role = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.role" }];
+  // Edits to example.v1.Member.addresses, by base index.
   repeated AddressesEdit addresses = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" }];
+  // Numbers of fields that become unset.
   repeated int32 clear = 536870911;
 
+  // An edit to example.v1.Member.addresses at one base index.
   message AddressesEdit {
     option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member.addresses" kind: LIST_EDIT };
     // A position in the base list of n items: [0, n) for patch and remove,
     // [0, n] for insert_before, where n appends.
     uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" index: true }];
+    // What the edit does.
     oneof op {
+      // Patches the element at index.
       AddressDiff patch = 2;
+      // Removes the element at index.
       google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
       Inserted insert_before = 4;
     }
+
     // The elements inserted, in order.
     message Inserted {
+      // The elements, in order.
       repeated example.v1.Address items = 1;
     }
   }
 }
 
+// A change to example.v1.Address. An unset field leaves its value unchanged.
 message AddressDiff {
   option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Address" kind: PATCH };
+
+  // Sets example.v1.Address.line when present.
   string line = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Address.line" }];
+  // Numbers of fields that become unset.
   repeated int32 clear = 536870911;
 }
 ```
@@ -301,8 +331,11 @@ The rules:
 - **A keyed list** becomes `repeated <Field>Change`, a change wrapper nested in
   the parent's patch body. Its key has the key field's type. A map with scalar
   values has `set` and `remove` instead of `add`, `remove` and `patch`.
-- **An ORDERED list** also gets `<field>_order`, the complete final order of
-  keys, present only when the order changed. `Apply` sorts the list to it.
+- **An ORDERED list** also gets `<field>_order`, a field of the patch body
+  that holds the list. Without it, `Apply` keeps surviving items in their base
+  order and puts added items after them, in key order. `Diff` writes the
+  complete final order of keys there only when the final order differs from
+  that default, and `Apply` sorts the list to it.
 - **An INDEXED list** becomes `repeated <Field>Edit`, each a base index and
   one of `patch`, `remove` or `insert_before`, which carries the inserted
   elements in order. For scalar elements, `patch` holds the new value. Edits

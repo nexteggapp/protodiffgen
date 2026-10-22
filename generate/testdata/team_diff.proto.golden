@@ -20,7 +20,8 @@ message TeamDiff {
   repeated MembersChange members = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" }];
   // Sets example.v1.Team.tags whole when present.
   TagsReplace tags = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.tags" }];
-  // The members' keys in their final order. Present only when it changed.
+  // The members' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated string members_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" order: true }];
   // Numbers of fields that become unset.
   repeated int32 clear = 536870911;

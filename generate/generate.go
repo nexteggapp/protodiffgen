@@ -254,7 +254,7 @@ func (g *gen) fill(m *message, md protoreflect.MessageDescriptor) {
 			number:   number,
 			repeated: true,
 			oneof:    -1,
-			comment:  []string{fmt.Sprintf("The %s keys in their final order. Present only when it changed.", possessive(string(r.field.Name())))},
+			comment:  []string{fmt.Sprintf("The %s keys in their final order. Present only when it differs", possessive(string(r.field.Name()))), "from the default: kept items in base order, then added items in key order."},
 			source:   ptr(schema.NewFieldSource(r.field.FullName(), false, true, false)),
 			features: features(r.key),
 			origin:   "the order field of " + string(r.field.FullName()),

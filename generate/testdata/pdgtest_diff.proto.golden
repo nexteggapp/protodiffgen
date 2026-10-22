@@ -81,9 +81,11 @@ message RootDiff {
   repeated CoinsChange coins = 29 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.coins" }];
   // Patches pdgtest.v1.Root.tree, starting from empty if it is unset.
   NodeDiff tree = 30 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tree" }];
-  // The members' keys in their final order. Present only when it changed.
+  // The members' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated string members_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.members" order: true }];
-  // The tagged's keys in their final order. Present only when it changed.
+  // The tagged's keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated pdgtest.v1.Color tagged_order = 536870909 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tagged" order: true }];
   // Numbers of fields that become unset.
   repeated int32 unset = 536870911;
@@ -294,7 +296,8 @@ message LegacyDiff {
   repeated EntriesChange entries = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.entries" }];
   // Edits to pdgtest.v1.Legacy.levels, by base index.
   repeated LevelsEdit levels = 5 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.levels" }];
-  // The entries' keys in their final order. Present only when it changed.
+  // The entries' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated string entries_order = 536870910 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.entries" order: true }];
   // Numbers of fields that become unset.
   repeated int32 unset = 536870911;
@@ -477,7 +480,8 @@ message GroupDiff {
   string title = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.title" }];
   // Changes to pdgtest.v1.Group.seats, one per changed key.
   repeated SeatsChange seats = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.seats" }];
-  // The seats' keys in their final order. Present only when it changed.
+  // The seats' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
   repeated string seats_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.seats" order: true }];
   // Numbers of fields that become unset.
   repeated int32 unset = 536870911;

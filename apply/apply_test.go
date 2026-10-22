@@ -201,7 +201,7 @@ func TestDiff(t *testing.T) {
 			`scores { index: 0 patch: 9 } scores { index: 1 remove {} } scores { index: 3 insert_before { items: 4 } }`,
 		},
 		{
-			"keyed changes are in key order and the order is kept only when it changed",
+			"keyed changes are in key order and the order is written only when it differs from the default",
 			`members { id: "b" } members { id: "a" name: "A" }`,
 			`members { id: "a" name: "B" } members { id: "c" }`,
 			`members { id: "a" patch { name: "B" } } members { id: "b" remove {} } members { id: "c" add { id: "c" } }`,
