@@ -1,0 +1,7 @@
+# The sample config from docs/design.md.
+target_message: "example.v1.Team"
+output_package: "example.v1.diff"
+file_options { go_package: "example.com/team/v1/diffpb" }
+atomic_types: "example.v1.Money"
+lists { field: "example.v1.Team.members" strategy: KEYED key: "id" order: ORDERED }
+lists { field: "example.v1.Member.addresses" strategy: INDEXED }

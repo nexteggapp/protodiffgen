@@ -1,0 +1,48 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "generate",
+    srcs = [
+        "config.go",
+        "descriptor.go",
+        "generate.go",
+        "print.go",
+    ],
+    importpath = "github.com/nexteggapp/protodiffgen/generate",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/schema",
+        "@org_golang_google_protobuf//encoding/prototext",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//reflect/protoregistry",
+        "@org_golang_google_protobuf//types/descriptorpb",
+        "@org_golang_google_protobuf//types/dynamicpb",
+        "@org_golang_google_protobuf//types/known/emptypb",
+    ],
+)
+
+go_test(
+    name = "generate_test",
+    size = "small",
+    srcs = ["generate_test.go"],
+    data = glob(["testdata/**"]) + [
+        "//examples:team.diff.textproto",
+        "//examples:team_diff.proto",
+        "//examples/example/v1:team.proto",
+        "//internal/testschema:protos",
+        "//v1:config.proto",
+    ],
+    deps = [
+        ":generate",
+        "//internal/schema",
+        "//internal/testschema",
+        "@com_github_bufbuild_protocompile//:protocompile",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+    ],
+)
+
+exports_files(glob(["testdata/*.golden"]))

@@ -1,0 +1,598 @@
+edition = "2023";
+
+package pdgtest.v1.diff;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "nextgui.xyz/protodiffgen/v1/config.proto";
+import "pdgtest/v1/legacy.proto";
+import "pdgtest/v1/modern.proto";
+import "pdgtest/v1/test.proto";
+
+option java_multiple_files = true;
+option go_package = "example.com/pdgtest/v1/diffpb";
+
+// A change to pdgtest.v1.Root. An unset field leaves its value unchanged.
+message RootDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root" kind: PATCH };
+
+  // Sets pdgtest.v1.Root.name when present.
+  string name = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.name" }];
+  // Sets pdgtest.v1.Root.count when present.
+  int64 count = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.count" }];
+  // Sets pdgtest.v1.Root.ratio when present.
+  double ratio = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.ratio" }];
+  // Sets pdgtest.v1.Root.weight when present.
+  float weight = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.weight" }];
+  // Sets pdgtest.v1.Root.blob when present.
+  bytes blob = 5 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.blob" }];
+  // Sets pdgtest.v1.Root.flag when present.
+  bool flag = 6 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.flag" }];
+  // Sets pdgtest.v1.Root.color when present.
+  pdgtest.v1.Color color = 7 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.color" }];
+  // Patches pdgtest.v1.Root.legacy, starting from empty if it is unset.
+  LegacyDiff legacy = 8 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.legacy" }];
+  // Sets pdgtest.v1.Root.budget whole when present: it is atomic.
+  pdgtest.v1.Money budget = 9 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.budget" }];
+  // Patches pdgtest.v1.Root.settings, starting from empty if it is unset.
+  SettingsDiff settings = 10 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.settings" }];
+  // Sets pdgtest.v1.Root.frozen whole when present: it is atomic.
+  pdgtest.v1.Settings frozen = 11 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.frozen" }];
+  // Sets pdgtest.v1.Root.created whole when present: it is atomic.
+  google.protobuf.Timestamp created = 12 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.created" }];
+  // Sets pdgtest.v1.Root.note whole when present: it is atomic.
+  google.protobuf.StringValue note = 13 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.note" }];
+  // Changes to pdgtest.v1.Root.members, one per changed key.
+  repeated MembersChange members = 14 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.members" }];
+  // Changes to pdgtest.v1.Root.groups, one per changed key.
+  repeated GroupsChange groups = 15 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.groups" }];
+  // Edits to pdgtest.v1.Root.lines, by base index.
+  repeated LinesEdit lines = 16 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.lines" }];
+  // Edits to pdgtest.v1.Root.scores, by base index.
+  repeated ScoresEdit scores = 17 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.scores" }];
+  // Sets pdgtest.v1.Root.tags whole when present.
+  TagsReplace tags = 18 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tags" }];
+  // Sets pdgtest.v1.Root.prices whole when present.
+  PricesReplace prices = 19 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.prices" }];
+  // Changes to pdgtest.v1.Root.counts, one per changed map key.
+  repeated CountsChange counts = 20 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.counts" }];
+  // Changes to pdgtest.v1.Root.configs, one per changed map key.
+  repeated ConfigsChange configs = 21 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.configs" }];
+  // Changes to pdgtest.v1.Root.wallet, one per changed map key.
+  repeated WalletChange wallet = 22 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.wallet" }];
+  // The cases of pdgtest.v1.Root.payment. Setting a case unlike the base's replaces the oneof.
+  oneof payment {
+    // Sets pdgtest.v1.Root.cash when present.
+    string cash = 23 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.cash" }];
+    // Patches pdgtest.v1.Root.card, starting from empty if it is unset.
+    CardDiff card = 24 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.card" }];
+    // Sets pdgtest.v1.Root.credit whole when present: it is atomic.
+    pdgtest.v1.Money credit = 25 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.credit" }];
+  }
+  // Changes to pdgtest.v1.Root.tagged, one per changed key.
+  repeated TaggedChange tagged = 26 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tagged" }];
+  // Edits to pdgtest.v1.Root.waits, by base index.
+  repeated WaitsEdit waits = 27 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.waits" }];
+  // Patches pdgtest.v1.Root.modern, starting from empty if it is unset.
+  ModernDiff modern = 28 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.modern" }];
+  // Changes to pdgtest.v1.Root.coins, one per changed key.
+  repeated CoinsChange coins = 29 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.coins" }];
+  // Patches pdgtest.v1.Root.tree, starting from empty if it is unset.
+  NodeDiff tree = 30 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tree" }];
+  // The members' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
+  repeated string members_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.members" order: true }];
+  // The tagged's keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
+  repeated pdgtest.v1.Color tagged_order = 536870909 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.tagged" order: true }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // A change to one item of pdgtest.v1.Root.members, matched by id.
+  message MembersChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.members" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.id" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its id must equal the key.
+      pdgtest.v1.Member add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      MemberDiff patch = 4;
+    }
+  }
+
+  // A change to one item of pdgtest.v1.Root.groups, matched by number.
+  message GroupsChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.groups" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    int64 number = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.number" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its number must equal the key.
+      pdgtest.v1.Group add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      GroupDiff patch = 4;
+    }
+  }
+
+  // An edit to pdgtest.v1.Root.lines at one base index.
+  message LinesEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.lines" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.lines" index: true }];
+    // What the edit does.
+    oneof op {
+      // Patches the element at index.
+      LineDiff patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated pdgtest.v1.Line items = 1;
+    }
+  }
+
+  // An edit to pdgtest.v1.Root.scores at one base index.
+  message ScoresEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.scores" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.scores" index: true }];
+    // What the edit does.
+    oneof op {
+      // Replaces the element at index.
+      sint32 patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated sint32 items = 1;
+    }
+  }
+
+  // The whole new value of pdgtest.v1.Root.tags. Present means "use this list".
+  message TagsReplace {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.tags" kind: REPLACE };
+    // The new list, in order.
+    repeated string tags = 1;
+  }
+
+  // The whole new value of pdgtest.v1.Root.prices. Present means "use this list".
+  message PricesReplace {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.prices" kind: REPLACE };
+    // The new list, in order.
+    repeated pdgtest.v1.Money prices = 1;
+  }
+
+  // A change to one key of pdgtest.v1.Root.counts.
+  message CountsChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.counts" kind: LIST_CHANGE };
+    // The map key this changes.
+    string key = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.CountsEntry.key" key: true }];
+    // What the change does.
+    oneof op {
+      // Sets the value at the key, whether or not the map has it.
+      int32 set = 2;
+      // Removes the key.
+      google.protobuf.Empty remove = 3;
+    }
+  }
+
+  // A change to one key of pdgtest.v1.Root.configs.
+  message ConfigsChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.configs" kind: LIST_CHANGE };
+    // The map key this changes.
+    int32 key = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.ConfigsEntry.key" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds this value at a key the map lacks.
+      pdgtest.v1.Settings add = 2;
+      // Removes the key.
+      google.protobuf.Empty remove = 3;
+      // Patches the value at the key.
+      SettingsDiff patch = 4;
+    }
+  }
+
+  // A change to one key of pdgtest.v1.Root.wallet.
+  message WalletChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.wallet" kind: LIST_CHANGE };
+    // The map key this changes.
+    string key = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.WalletEntry.key" key: true }];
+    // What the change does.
+    oneof op {
+      // Sets the value at the key, whether or not the map has it.
+      pdgtest.v1.Money set = 2;
+      // Removes the key.
+      google.protobuf.Empty remove = 3;
+    }
+  }
+
+  // A change to one item of pdgtest.v1.Root.tagged, matched by color.
+  message TaggedChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.tagged" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    pdgtest.v1.Color color = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Tagged.color" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its color must equal the key.
+      pdgtest.v1.Tagged add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      TaggedDiff patch = 4;
+    }
+  }
+
+  // An edit to pdgtest.v1.Root.waits at one base index.
+  message WaitsEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.waits" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Root.waits" index: true }];
+    // What the edit does.
+    oneof op {
+      // Replaces the element at index.
+      google.protobuf.Duration patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated google.protobuf.Duration items = 1;
+    }
+  }
+
+  // A change to one item of pdgtest.v1.Root.coins, matched by heads.
+  message CoinsChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Root.coins" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    bool heads = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Coin.heads" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its heads must equal the key.
+      pdgtest.v1.Coin add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Replaces the item whole. It may not change the key.
+      pdgtest.v1.Coin patch = 4;
+    }
+  }
+}
+
+// A change to pdgtest.v1.Legacy. An unset field leaves its value unchanged.
+message LegacyDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Legacy" kind: PATCH };
+
+  // Sets pdgtest.v1.Legacy.label when present.
+  string label = 1 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.label" }];
+  // Sets pdgtest.v1.Legacy.level when present.
+  pdgtest.v1.Level level = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.level" }];
+  // Sets pdgtest.v1.Legacy.codes whole when present.
+  CodesReplace codes = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.codes" }];
+  // Changes to pdgtest.v1.Legacy.entries, one per changed key.
+  repeated EntriesChange entries = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.entries" }];
+  // Edits to pdgtest.v1.Legacy.levels, by base index.
+  repeated LevelsEdit levels = 5 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.levels" }];
+  // The entries' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
+  repeated string entries_order = 536870910 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.entries" order: true }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // The whole new value of pdgtest.v1.Legacy.codes. Present means "use this list".
+  message CodesReplace {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Legacy.codes" kind: REPLACE };
+    // The new list, in order.
+    repeated int32 codes = 1 [features.repeated_field_encoding = EXPANDED];
+  }
+
+  // A change to one item of pdgtest.v1.Legacy.entries, matched by key.
+  message EntriesChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Legacy.entries" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    string key = 1 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.Entry.key" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its key must equal the key.
+      pdgtest.v1.Legacy.Entry add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      Legacy_EntryDiff patch = 4;
+    }
+  }
+
+  // An edit to pdgtest.v1.Legacy.levels at one base index.
+  message LevelsEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Legacy.levels" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.levels" index: true }];
+    // What the edit does.
+    oneof op {
+      // Replaces the element at index.
+      pdgtest.v1.Level patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated pdgtest.v1.Level items = 1 [features.repeated_field_encoding = EXPANDED];
+    }
+  }
+}
+
+// A change to pdgtest.v1.Legacy.Entry. An unset field leaves its value unchanged.
+message Legacy_EntryDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Legacy.Entry" kind: PATCH };
+
+  // Sets pdgtest.v1.Legacy.Entry.key when present.
+  // Kept, so Legacy_EntryDiff serves wherever Entry appears. A patch may not change it.
+  string key = 1 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.Entry.key" }];
+  // Sets pdgtest.v1.Legacy.Entry.value when present.
+  int32 value = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Legacy.Entry.value" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+}
+
+// A change to pdgtest.v1.Settings. An unset field leaves its value unchanged.
+message SettingsDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Settings" kind: PATCH };
+
+  // Sets pdgtest.v1.Settings.theme when present.
+  string theme = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.theme" }];
+  // Edits to pdgtest.v1.Settings.labels, by base index.
+  repeated LabelsEdit labels = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.labels" }];
+  // Sets pdgtest.v1.Settings.color when present.
+  pdgtest.v1.Color color = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.color" }];
+  // Changes to pdgtest.v1.Settings.extra, one per changed map key.
+  repeated ExtraChange extra = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.extra" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // An edit to pdgtest.v1.Settings.labels at one base index.
+  message LabelsEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Settings.labels" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.labels" index: true }];
+    // What the edit does.
+    oneof op {
+      // Replaces the element at index.
+      string patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated string items = 1;
+    }
+  }
+
+  // A change to one key of pdgtest.v1.Settings.extra.
+  message ExtraChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Settings.extra" kind: LIST_CHANGE };
+    // The map key this changes.
+    string key = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Settings.ExtraEntry.key" key: true }];
+    // What the change does.
+    oneof op {
+      // Sets the value at the key, whether or not the map has it.
+      string set = 2;
+      // Removes the key.
+      google.protobuf.Empty remove = 3;
+    }
+  }
+}
+
+// A change to pdgtest.v1.Member. An unset field leaves its value unchanged.
+message MemberDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Member" kind: PATCH };
+
+  // Sets pdgtest.v1.Member.id when present.
+  // Kept, so MemberDiff serves wherever Member appears. A patch may not change it.
+  string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.id" }];
+  // Sets pdgtest.v1.Member.name when present.
+  string name = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.name" }];
+  // Sets pdgtest.v1.Member.color when present.
+  pdgtest.v1.Color color = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.color" }];
+  // Edits to pdgtest.v1.Member.lines, by base index.
+  repeated LinesEdit lines = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.lines" }];
+  // Patches pdgtest.v1.Member.legacy, starting from empty if it is unset.
+  LegacyDiff legacy = 5 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.legacy" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // An edit to pdgtest.v1.Member.lines at one base index.
+  message LinesEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Member.lines" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Member.lines" index: true }];
+    // What the edit does.
+    oneof op {
+      // Patches the element at index.
+      LineDiff patch = 2;
+      // Removes the element at index.
+      google.protobuf.Empty remove = 3;
+      // Inserts elements before the element at index, or at the end when index is n.
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      // The elements, in order.
+      repeated pdgtest.v1.Line items = 1;
+    }
+  }
+}
+
+// A change to pdgtest.v1.Line. An unset field leaves its value unchanged.
+message LineDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Line" kind: PATCH };
+
+  // Sets pdgtest.v1.Line.text when present.
+  string text = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Line.text" }];
+  // Sets pdgtest.v1.Line.qty when present.
+  int32 qty = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Line.qty" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+}
+
+// A change to pdgtest.v1.Group. An unset field leaves its value unchanged.
+message GroupDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Group" kind: PATCH };
+
+  // Sets pdgtest.v1.Group.number when present.
+  // Kept, so GroupDiff serves wherever Group appears. A patch may not change it.
+  int64 number = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.number" }];
+  // Sets pdgtest.v1.Group.title when present.
+  string title = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.title" }];
+  // Changes to pdgtest.v1.Group.seats, one per changed key.
+  repeated SeatsChange seats = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.seats" }];
+  // The seats' keys in their final order. Present only when it differs
+  // from the default: kept items in base order, then added items in key order.
+  repeated string seats_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.seats" order: true }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // A change to one item of pdgtest.v1.Group.seats, matched by code.
+  message SeatsChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Group.seats" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    string code = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.Seat.code" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its code must equal the key.
+      pdgtest.v1.Group.Seat add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      Group_SeatDiff patch = 4;
+    }
+  }
+}
+
+// A change to pdgtest.v1.Group.Seat. An unset field leaves its value unchanged.
+message Group_SeatDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Group.Seat" kind: PATCH };
+
+  // Sets pdgtest.v1.Group.Seat.code when present.
+  // Kept, so Group_SeatDiff serves wherever Seat appears. A patch may not change it.
+  string code = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.Seat.code" }];
+  // Sets pdgtest.v1.Group.Seat.row when present.
+  int32 row = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.Seat.row" }];
+  // Sets pdgtest.v1.Group.Seat.aisle when present.
+  bool aisle = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Group.Seat.aisle" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+}
+
+// A change to pdgtest.v1.Card. An unset field leaves its value unchanged.
+message CardDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Card" kind: PATCH };
+
+  // Sets pdgtest.v1.Card.holder when present.
+  string holder = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Card.holder" }];
+  // Sets pdgtest.v1.Card.limit whole when present: it is atomic.
+  pdgtest.v1.Money limit = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Card.limit" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+}
+
+// A change to pdgtest.v1.Tagged. An unset field leaves its value unchanged.
+message TaggedDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Tagged" kind: PATCH };
+
+  // Sets pdgtest.v1.Tagged.color when present.
+  // Kept, so TaggedDiff serves wherever Tagged appears. A patch may not change it.
+  pdgtest.v1.Color color = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Tagged.color" }];
+  // Sets pdgtest.v1.Tagged.note when present.
+  string note = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Tagged.note" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+}
+
+// A change to pdgtest.v1.Modern. An unset field leaves its value unchanged.
+message ModernDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Modern" kind: PATCH };
+
+  // Sets pdgtest.v1.Modern.code when present.
+  string code = 1 [features.utf8_validation = NONE, (nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Modern.code" }];
+  // Sets pdgtest.v1.Modern.shade when present.
+  pdgtest.v1.Shade shade = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Modern.shade" }];
+  // Sets pdgtest.v1.Modern.plain when present.
+  int32 plain = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Modern.plain" }];
+  // Sets pdgtest.v1.Modern.stamps whole when present.
+  StampsReplace stamps = 4 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Modern.stamps" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // The whole new value of pdgtest.v1.Modern.stamps. Present means "use this list".
+  message StampsReplace {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Modern.stamps" kind: REPLACE };
+    // The new list, in order.
+    repeated int64 stamps = 1 [features.repeated_field_encoding = EXPANDED];
+  }
+}
+
+// A change to pdgtest.v1.Node. An unset field leaves its value unchanged.
+message NodeDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Node" kind: PATCH };
+
+  // Sets pdgtest.v1.Node.id when present.
+  // Kept, so NodeDiff serves wherever Node appears. A patch may not change it.
+  string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Node.id" }];
+  // Sets pdgtest.v1.Node.weight when present.
+  double weight = 2 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Node.weight" }];
+  // Changes to pdgtest.v1.Node.children, one per changed key.
+  repeated ChildrenChange children = 3 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Node.children" }];
+  // Numbers of fields that become unset.
+  repeated int32 unset = 536870911;
+
+  // A change to one item of pdgtest.v1.Node.children, matched by id.
+  message ChildrenChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "pdgtest.v1.Node.children" kind: LIST_CHANGE };
+    // The key of the item this changes.
+    string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "pdgtest.v1.Node.id" key: true }];
+    // What the change does.
+    oneof op {
+      // Adds the item. Its id must equal the key.
+      pdgtest.v1.Node add = 2;
+      // Removes the item.
+      google.protobuf.Empty remove = 3;
+      // Patches the item. It may not change the key.
+      NodeDiff patch = 4;
+    }
+  }
+}

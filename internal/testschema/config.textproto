@@ -1,0 +1,25 @@
+# The config for the test schema in proto/pdgtest/v1.
+target_message: "pdgtest.v1.Root"
+output_package: "pdgtest.v1.diff"
+file_options {
+  go_package: "example.com/pdgtest/v1/diffpb"
+  java_multiple_files: true
+}
+atomic_types: "pdgtest.v1.Money"
+atomic_types: "pdgtest.v1.Coin"
+atomic_fields: "pdgtest.v1.Root.frozen"
+lists { field: "pdgtest.v1.Root.members" strategy: KEYED key: "id" order: ORDERED }
+lists { field: "pdgtest.v1.Root.groups" strategy: KEYED key: "number" order: UNORDERED }
+lists { field: "pdgtest.v1.Group.seats" strategy: KEYED key: "code" order: ORDERED }
+lists { field: "pdgtest.v1.Root.lines" strategy: INDEXED }
+lists { field: "pdgtest.v1.Member.lines" strategy: INDEXED }
+lists { field: "pdgtest.v1.Root.scores" strategy: INDEXED }
+lists { field: "pdgtest.v1.Settings.labels" strategy: INDEXED }
+lists { field: "pdgtest.v1.Root.prices" strategy: REPLACE }
+lists { field: "pdgtest.v1.Root.tagged" strategy: KEYED key: "color" order: ORDERED }
+lists { field: "pdgtest.v1.Root.waits" strategy: INDEXED }
+lists { field: "pdgtest.v1.Root.coins" strategy: KEYED key: "heads" order: UNORDERED }
+lists { field: "pdgtest.v1.Legacy.entries" strategy: KEYED key: "key" order: ORDERED }
+lists { field: "pdgtest.v1.Legacy.levels" strategy: INDEXED }
+lists { field: "pdgtest.v1.Node.children" strategy: KEYED key: "id" order: UNORDERED }
+clear_field_name: "unset"

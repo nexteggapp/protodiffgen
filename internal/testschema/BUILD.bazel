@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "testschema",
+    testonly = True,
+    srcs = ["testschema.go"],
+    embedsrcs = glob(["proto/**/*.proto"]) + ["config.textproto"],
+    importpath = "github.com/nexteggapp/protodiffgen/internal/testschema",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//generate",
+        "//internal/schema",
+        "@com_github_bufbuild_protocompile//:protocompile",
+        "@com_github_bufbuild_protocompile//linker",
+        "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)
+
+filegroup(
+    name = "protos",
+    srcs = glob(["proto/**/*.proto"]),
+    visibility = ["//generate:__pkg__"],
+)

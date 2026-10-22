@@ -1,0 +1,41 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "apply",
+    srcs = [
+        "apply.go",
+        "diff.go",
+        "equal.go",
+        "myers.go",
+        "overlap.go",
+        "plan.go",
+        "validate.go",
+    ],
+    importpath = "github.com/nexteggapp/protodiffgen/apply",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/schema",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+    ],
+)
+
+go_test(
+    name = "apply_test",
+    size = "small",
+    srcs = [
+        "apply_test.go",
+        "fault_test.go",
+        "property_test.go",
+        "random_test.go",
+    ],
+    embed = [":apply"],
+    deps = [
+        "//internal/testschema",
+        "@org_golang_google_protobuf//encoding/prototext",
+        "@org_golang_google_protobuf//encoding/protowire",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/dynamicpb",
+    ],
+)
