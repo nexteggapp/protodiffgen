@@ -10,7 +10,7 @@ computes, applies and checks those diffs by reflection.
 # team.diff.textproto
 target_message: "example.v1.Team"
 output_package: "example.v1.diff"
-lists { field: "example.v1.Team.members" strategy: KEYED key: "id" }
+lists { field: "example.v1.Team.members" strategy: KEYED key: "id" order: UNORDERED }
 ```
 
 ```go
@@ -31,4 +31,4 @@ Your own `.proto` files need no annotations and no dependency on protodiffgen.
 
 Status: designed, not built. See [`docs/design.md`](docs/design.md).
 
-Licence: Apache 2.0. See [`LICENSE`](LICENSE).
+License: Apache 2.0. See [`LICENSE`](LICENSE).
