@@ -7,7 +7,12 @@ _PROTO_TOOLCHAIN = Label("@protobuf//bazel/private:proto_toolchain_type")
 
 def _proto_diff_library_impl(ctx):
     name = ctx.label.name.removesuffix("_proto")
-    out = ctx.actions.declare_file(name + ".proto")
+
+    # The file is written under _virtual_imports, as proto_library does for an
+    # import_prefix, so a checked-in copy at its import path doesn't collide.
+    virtual = "_virtual_imports/" + ctx.label.name
+    import_path = "/".join([p for p in [ctx.label.package, name + ".proto"] if p])
+    out = ctx.actions.declare_file(virtual + "/" + import_path)
     deps = [d[ProtoInfo] for d in ctx.attr.deps]
     sets = depset(transitive = [d.transitive_descriptor_sets for d in deps])
 
@@ -32,6 +37,9 @@ def _proto_diff_library_impl(ctx):
         srcs = [out],
         deps = all_deps,
         descriptor_set = descriptor_set,
+        proto_path = "/".join([p for p in [ctx.label.package, virtual] if p]),
+        workspace_root = ctx.label.workspace_root,
+        bin_dir = ctx.bin_dir.path,
     )
     if proto_common.INCOMPATIBLE_ENABLE_PROTO_TOOLCHAIN_RESOLUTION:
         toolchain = ctx.toolchains[_PROTO_TOOLCHAIN]
@@ -57,7 +65,7 @@ def _proto_diff_library_impl(ctx):
     )
     return [
         proto_info,
-        DefaultInfo(files = depset([out, descriptor_set])),
+        DefaultInfo(files = depset([out])),
     ]
 
 _attrs = dict({
@@ -96,8 +104,8 @@ proto_diff_library = rule(
     doc = """Generates the diff .proto for the target a DiffConfig names.
 
 The file is named after the target, without a trailing "_proto": a target
-team_diff_proto in package examples writes examples/team_diff.proto. The rule
-returns a ProtoInfo, so language rules such as go_proto_library take it as
+team_diff_proto in package examples writes a file imported as
+examples/team_diff.proto, which is its default output. The rule returns a ProtoInfo, so language rules such as go_proto_library take it as
 they take a proto_library.
 """,
     attrs = _attrs,

@@ -1,7 +1,6 @@
 package examples_test
 
 import (
-	"os"
 	"slices"
 	"testing"
 
@@ -66,21 +65,5 @@ func TestDiffThenApply(t *testing.T) {
 	}}}
 	if _, err := apply.Apply(before, bad); err == nil {
 		t.Error("Apply accepted a remove of a missing key")
-	}
-}
-
-// TestGeneratedFile checks that proto_diff_library writes the golden file
-// the Go tests check.
-func TestGeneratedFile(t *testing.T) {
-	got, err := os.ReadFile("team_diff.proto")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want, err := os.ReadFile("../generate/testdata/team_diff.proto.golden")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != string(want) {
-		t.Errorf("team_diff.proto differs from the golden file:\n%s", got)
 	}
 }

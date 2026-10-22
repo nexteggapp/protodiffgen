@@ -57,7 +57,9 @@ go_proto_library(
 )
 ```
 
-[`examples/`](examples) builds the design's Team sample this way.
+[`examples/`](examples) builds the design's Team sample this way, and keeps a
+copy of the generated `team_diff.proto`: `bazel run //examples:write_team_diff`
+updates it, and `bazel test //...` fails if it is stale.
 
 ## With buf or protoc
 

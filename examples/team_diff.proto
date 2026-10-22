@@ -1,0 +1,76 @@
+edition = "2023";
+
+package example.v1.diff;
+
+import "example/v1/team.proto";
+import "google/protobuf/empty.proto";
+import "nextgui.xyz/protodiffgen/v1/config.proto";
+
+option go_package = "example.com/team/v1/diffpb";
+
+message TeamDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team" kind: PATCH };
+
+  string name = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.name" }];
+  // Atomic: present means "set to this".
+  example.v1.Money budget = 2 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.budget" }];
+  repeated MembersChange members = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" }];
+  TagsReplace tags = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.tags" }];
+  // The members' keys in their final order. Present only when it changed.
+  repeated string members_order = 536870910 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Team.members" order: true }];
+  // Numbers of fields that become unset.
+  repeated int32 clear = 536870911;
+
+  message MembersChange {
+    option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team.members" kind: LIST_CHANGE };
+    string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.id" key: true }];
+    oneof op {
+      example.v1.Member add = 2;
+      google.protobuf.Empty remove = 3;
+      MemberDiff patch = 4;
+    }
+  }
+
+  // Present means "use this list".
+  message TagsReplace {
+    option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Team.tags" kind: REPLACE };
+    repeated string tags = 1;
+  }
+}
+
+message MemberDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member" kind: PATCH };
+
+  // Kept, so MemberDiff serves wherever Member appears. A patch may not change it.
+  string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.id" }];
+  string name = 2 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.name" }];
+  example.v1.Role role = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.role" }];
+  repeated AddressesEdit addresses = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" }];
+  // Numbers of fields that become unset.
+  repeated int32 clear = 536870911;
+
+  message AddressesEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member.addresses" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" index: true }];
+    oneof op {
+      AddressDiff patch = 2;
+      google.protobuf.Empty remove = 3;
+      Inserted insert_before = 4;
+    }
+
+    // The elements inserted, in order.
+    message Inserted {
+      repeated example.v1.Address items = 1;
+    }
+  }
+}
+
+message AddressDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Address" kind: PATCH };
+
+  string line = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Address.line" }];
+  // Numbers of fields that become unset.
+  repeated int32 clear = 536870911;
+}
