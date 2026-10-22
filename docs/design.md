@@ -1,6 +1,7 @@
 # protodiffgen design
 
-> **Status: designed, not built.**
+> **Status: v0.1 is built, not yet tagged.** The extension number is still a
+> placeholder; see Open questions.
 
 ## What it is
 
@@ -339,10 +340,20 @@ proto_diff_library(
 ```
 
 It reads its deps' `ProtoInfo.transitive_descriptor_sets`, runs the CLI to
-write the `.proto`, and returns a `ProtoInfo` of its own. That provider's
-direct deps are the `ProtoInfo`s of exactly the files the generated file
-imports, so it passes `--strict_proto_deps` though the target's types come
-from many files. The `.proto` is built, never checked in.
+write the `.proto`, compiles it with the proto toolchain, and returns a
+`ProtoInfo` of its own. The file is named after the target without a trailing
+`_proto`, so `team_diff_proto` in package `examples` writes
+`examples/team_diff.proto`. The `.proto` is built, never checked in.
+
+The generated file imports the files whose types it uses, which can be any
+file the deps reach, and which ones is known only once the CLI has run. So the
+compile of the generated file does not check strict deps. A `proto_library`
+that imports the generated file does pass `--strict_proto_deps`, because the
+provider's direct source is that file.
+
+`go_proto_library` accepts this `ProtoInfo` as it accepts a `proto_library`'s.
+`examples/` builds the Team sample that way, and its test runs `Diff` and
+`Apply` on the generated Go types.
 
 **CLI.** For buf or protoc users:
 
@@ -469,6 +480,3 @@ goes to the Bazel Central Registry.
 - **Preconditions.** A diff applied to anything but its own base may apply
   wrongly, most of all an indexed one. A general mechanism for stating what a
   diff expects of its base could come later.
-- **Language rules.** That rules such as `go_proto_library` accept a
-  `ProtoInfo` from a rule other than `proto_library` is to be confirmed in the
-  first build.
