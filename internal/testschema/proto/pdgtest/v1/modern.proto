@@ -1,0 +1,17 @@
+// Editions shapes: a closed enum and per-field features.
+edition = "2023";
+
+package pdgtest.v1;
+
+enum Shade {
+  option features.enum_type = CLOSED;
+  SHADE_LIGHT = 1;
+  SHADE_DARK = 2;
+}
+
+message Modern {
+  string code = 1 [features.utf8_validation = NONE];
+  Shade shade = 2;
+  int32 plain = 3 [features.field_presence = IMPLICIT];
+  repeated int64 stamps = 4 [features.repeated_field_encoding = EXPANDED];
+}

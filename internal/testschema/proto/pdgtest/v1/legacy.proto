@@ -1,0 +1,24 @@
+// proto2 shapes: explicit presence, a closed enum, expanded encoding and
+// strings without UTF-8 checks.
+syntax = "proto2";
+
+package pdgtest.v1;
+
+// Closed: it has no zero value, and unknown numbers are not kept.
+enum Level {
+  LEVEL_LOW = 1;
+  LEVEL_HIGH = 2;
+}
+
+message Legacy {
+  optional string label = 1;
+  optional Level level = 2;
+  repeated int32 codes = 3;
+  repeated Entry entries = 4;
+  repeated Level levels = 5;
+
+  message Entry {
+    optional string key = 1;
+    optional int32 value = 2;
+  }
+}

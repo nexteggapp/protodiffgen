@@ -1,0 +1,35 @@
+// The sample target from docs/design.md.
+syntax = "proto3";
+
+package example.v1;
+
+option go_package = "example.com/team/v1/teampb";
+
+message Team {
+  string name = 1;
+  Money budget = 2;
+  repeated Member members = 3;
+  repeated string tags = 4;
+}
+
+message Member {
+  string id = 1;
+  string name = 2;
+  Role role = 3;
+  repeated Address addresses = 4;
+}
+
+message Address {
+  string line = 1;
+}
+
+message Money {
+  string currency_code = 1;
+  int64 units = 2;
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_LEAD = 1;
+  ROLE_MEMBER = 2;
+}

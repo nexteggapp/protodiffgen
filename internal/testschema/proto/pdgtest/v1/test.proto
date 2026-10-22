@@ -1,0 +1,111 @@
+// The test schema: one target that reaches every shape protodiffgen handles.
+syntax = "proto3";
+
+package pdgtest.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "pdgtest/v1/legacy.proto";
+import "pdgtest/v1/modern.proto";
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+  COLOR_GREEN = 2;
+  COLOR_BLUE = 3;
+}
+
+message Root {
+  string name = 1;
+  optional int64 count = 2;
+  double ratio = 3;
+  optional float weight = 4;
+  bytes blob = 5;
+  bool flag = 6;
+  Color color = 7;
+  Legacy legacy = 8;
+  Money budget = 9;
+  Settings settings = 10;
+  Settings frozen = 11;
+  google.protobuf.Timestamp created = 12;
+  google.protobuf.StringValue note = 13;
+  repeated Member members = 14;
+  repeated Group groups = 15;
+  repeated Line lines = 16;
+  repeated sint32 scores = 17;
+  repeated string tags = 18;
+  repeated Money prices = 19;
+  map<string, int32> counts = 20;
+  map<int32, Settings> configs = 21;
+  map<string, Money> wallet = 22;
+  oneof payment {
+    string cash = 23;
+    Card card = 24;
+    Money credit = 25;
+  }
+  repeated Tagged tagged = 26;
+  repeated google.protobuf.Duration waits = 27;
+  Modern modern = 28;
+  repeated Coin coins = 29;
+  Node tree = 30;
+}
+
+message Money {
+  string currency = 1;
+  int64 units = 2;
+  int32 nanos = 3;
+}
+
+message Settings {
+  string theme = 1;
+  repeated string labels = 2;
+  Color color = 3;
+  map<string, string> extra = 4;
+}
+
+message Member {
+  string id = 1;
+  string name = 2;
+  Color color = 3;
+  repeated Line lines = 4;
+  Legacy legacy = 5;
+}
+
+message Group {
+  int64 number = 1;
+  string title = 2;
+  repeated Seat seats = 3;
+
+  message Seat {
+    string code = 1;
+    int32 row = 2;
+    optional bool aisle = 3;
+  }
+}
+
+message Line {
+  string text = 1;
+  int32 qty = 2;
+}
+
+message Card {
+  string holder = 1;
+  Money limit = 2;
+}
+
+message Tagged {
+  Color color = 1;
+  string note = 2;
+}
+
+message Coin {
+  bool heads = 1;
+  uint32 value = 2;
+}
+
+message Node {
+  string id = 1;
+  double weight = 2;
+  repeated Node children = 3;
+}
