@@ -20,14 +20,16 @@ Terms used below:
 
 - **Target**: the message being diffed, such as `example.v1.Team`.
 - **Keyed list**: a repeated message field whose items are matched by one of
-  their own fields, the **key**, such as a member's `id`. An item is never
-  addressed by its index.
+  their own fields, the **key**, such as a member's `id`. Its items are never
+  addressed by index.
+- **Indexed list**: a list whose edits name positions in the base list.
 - **Atomic**: a type or field that is always set whole, never patched, such as
   a money amount or a date.
 - **Patch body**: the generated message that describes a change to one message
   type, such as `TeamDiff` for `Team`.
-- **Change wrapper**: the generated message for one change to a keyed list:
-  the key, and an add, a remove or a patch.
+- **Change wrapper**: the generated message for one change to a list: for a
+  keyed list the key, and an add, a remove or a patch; for an indexed list a
+  base index, and a patch, a remove or an insert.
 
 It has three names, for three namespaces: the proto package
 `nextgui.protodiffgen.v1`, the import path
@@ -40,7 +42,7 @@ It has three names, for three namespaces: the proto package
 
 - A diff is a typed protobuf message, so it can be stored, sent and read with
   ordinary tools.
-- A list item is named by its key, so two diffs made from one base can be
+- A keyed list item is named by its key, so two diffs made from one base can be
   compared item by item.
 - The target's `.proto` files stay unaware of protodiffgen.
 - A mistake in the config fails the build, and a bad diff fails before
@@ -52,6 +54,7 @@ It has three names, for three namespaces: the proto package
 - Three-way merge, and any policy for two diffs that touch one item. `Overlap`
   reports them; the caller decides.
 - Keys made of more than one field.
+- Applying a diff to anything but the base it was made from.
 - Runtimes in languages other than Go.
 
 ## The config
@@ -91,6 +94,8 @@ message ListRule {
     STRATEGY_UNSPECIFIED = 0;
     // Items are matched by `key`.
     KEYED = 1;
+    // Edits name positions in the base list.
+    INDEXED = 3;
     // The list is set whole.
     REPLACE = 2;
   }
@@ -117,6 +122,7 @@ message Change {
     PATCH = 1;
     LIST_CHANGE = 2;
     REPLACE = 3;
+    LIST_EDIT = 4;
   }
   // The full name of the message or field it diffs.
   string source = 1;
@@ -131,6 +137,8 @@ message FieldSource {
   bool key = 2;
   // This holds a list's final key order.
   bool order = 3;
+  // This is an indexed edit's base index.
+  bool index = 4;
 }
 
 // One placeholder number for both, until registered.
@@ -147,15 +155,23 @@ The build fails when the config:
 - names a message or field that doesn't exist;
 - leaves a repeated message field the target reaches without a list rule;
 - gives a KEYED rule no `order`, or a key that isn't a singular string,
-  integer, bool or enum field of the item;
+  integer, bool or enum field of the item, or gives `key` or `order` to an
+  INDEXED or REPLACE rule;
 - names a repeated field in `atomic_fields`, which a REPLACE rule does instead;
 - produces a generated name that collides: two patch bodies with one name, or
   a generated field (`clear`, `<field>_order`) with a source field's name;
 - reaches a source field numbered in the range generated fields use (see
   below), or a group.
 
-A repeated scalar is always replaced whole, and a map field is keyed by its map
-key, so neither needs a rule. Extension fields are not part of a diff.
+A repeated scalar is replaced whole unless a rule makes it INDEXED, and a map
+field is keyed by its map key, so neither needs a rule. Extension fields are not
+part of a diff.
+
+**Choosing a strategy.** Use KEYED when items have an identity of their own: it
+is the most robust, because a key still names the same item after other
+changes. Use INDEXED for long lists whose items have no identity, where
+replacing the whole list for one edit would be wasteful. Use REPLACE for short
+ones.
 
 ## What is generated
 
@@ -185,7 +201,7 @@ output_package: "example.v1.diff"
 file_options { go_package: "example.com/team/v1/diffpb" }
 atomic_types: "example.v1.Money"
 lists { field: "example.v1.Team.members" strategy: KEYED key: "id" order: ORDERED }
-lists { field: "example.v1.Member.addresses" strategy: REPLACE }
+lists { field: "example.v1.Member.addresses" strategy: INDEXED }
 ```
 
 protodiffgen writes:
@@ -238,13 +254,30 @@ message MemberDiff {
   string id = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.id" }];
   string name = 2 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.name" }];
   example.v1.Role role = 3 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.role" }];
-  AddressesReplace addresses = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" }];
+  repeated AddressesEdit addresses = 4 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" }];
   repeated int32 clear = 536870911;
 
-  message AddressesReplace {
-    option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member.addresses" kind: REPLACE };
-    repeated example.v1.Address addresses = 1;
+  message AddressesEdit {
+    option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Member.addresses" kind: LIST_EDIT };
+    // A position in the base list of n items: [0, n) for patch and remove,
+    // [0, n] for insert_before, where n appends.
+    uint32 index = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Member.addresses" index: true }];
+    oneof op {
+      AddressDiff patch = 2;
+      google.protobuf.Empty remove = 3;
+      Inserted insert_before = 4;
+    }
+    // The elements inserted, in order.
+    message Inserted {
+      repeated example.v1.Address items = 1;
+    }
   }
+}
+
+message AddressDiff {
+  option (nextgui.protodiffgen.v1.change) = { source: "example.v1.Address" kind: PATCH };
+  string line = 1 [(nextgui.protodiffgen.v1.field) = { source: "example.v1.Address.line" }];
+  repeated int32 clear = 536870911;
 }
 ```
 
@@ -269,6 +302,16 @@ The rules:
   values has `set` and `remove` instead of `add`, `remove` and `patch`.
 - **An ORDERED list** also gets `<field>_order`, the complete final order of
   keys, present only when the order changed. `Apply` sorts the list to it.
+- **An INDEXED list** becomes `repeated <Field>Edit`, each a base index and
+  one of `patch`, `remove` or `insert_before`, which carries the inserted
+  elements in order. For scalar elements, `patch` holds the new value. Edits
+  name positions in the base list and never shift while being applied, so
+  their order in the diff doesn't matter. Each index has at most one insert
+  and at most one patch or remove. `Apply` builds the result by walking base
+  indexes 0 to n−1: at each index i it emits the insert at i, if any, then
+  `base[i]`, patched if patched and left out if removed. Finally it emits the
+  insert at n. So an insert at an index comes before that index's element,
+  whatever is done to it.
 - **A REPLACE list** becomes a wrapper, such as `TagsReplace`, whose presence
   means "use this list".
 - **Field numbers match the source.** The generated fields take numbers from
@@ -335,10 +378,12 @@ func (i Item) Path() []Step
 func (i Item) Field() protoreflect.FieldNumber
 func (i Item) String() string
 
-// Step is one keyed list item on a path. An enum key is held as its number.
-type Step struct{ list protoreflect.FullName; key protoreflect.MapKey }
+// Step is one list item on a path: by key in a keyed list, where an enum key
+// is held as its number, or by base index in an indexed one.
+type Step struct{ list protoreflect.FullName; key protoreflect.MapKey; index int }
 func (s Step) List() protoreflect.FullName
 func (s Step) Key() protoreflect.MapKey
+func (s Step) Index() int
 ```
 
 `Validate`, and so `Apply`, refuse a diff that:
@@ -350,6 +395,9 @@ func (s Step) Key() protoreflect.MapKey
 - clears a field without explicit presence (it is set to its zero value
   instead), or both sets and clears one field;
 - has an order field that doesn't name exactly the resulting keys, once each;
+- in an indexed list, has a patch or remove index outside [0, n) or an insert
+  index outside [0, n], a second insert at one index, two of patch and remove
+  at one index, or an insert with no elements;
 - leaves an optional key unset in an add;
 - or has unknown fields, as `a` may not either.
 
@@ -358,21 +406,33 @@ overlap when both change the same field of the same item, or when one adds,
 removes or replaces an ancestor of what the other changes. Setting an atomic
 message, a REPLACE list or a new oneof case replaces everything inside it.
 Changes to the root are reported per field, so two diffs that change different
-top-level fields don't overlap.
+top-level fields don't overlap. In an indexed list, two diffs overlap at a base
+index when both patch or remove it, when both insert at it, or when one
+patches or removes it and the other inserts at it. An insert at n overlaps
+only another insert at n.
 
 **Equal.** Two messages are equal when every field is: an UNORDERED keyed list
-as a set by key, an ORDERED one in order, REPLACE lists and maps element by
-element, recursively. Floats compare by their bits, so NaN equals NaN and
+as a set by key, an ORDERED one in order, INDEXED and REPLACE lists and maps
+element by element, recursively. Floats compare by their bits, so NaN equals NaN and
 `-0.0` differs from `0.0`. `proto.Equal` won't do: it is order-sensitive.
+
+**Canonical `Diff` for an indexed list.** `Diff` runs a Myers sequence diff
+over the two lists, comparing elements with `Equal`. Within each run of
+removed-then-added elements, it pairs them by position as patches. Extra
+removes stay removes, and extra adds become one `insert_before` at the next
+base index that survives, or at n.
 
 ## Tests
 
 - **Property tests** over random messages of a test schema with every shape
-  above. `Equal(Apply(a, Diff(a, b)), b)` holds. For any `d` that `Validate`
-  accepts, `Diff(a, Apply(a, d))` is `d` in its normal form for `a`: entries
-  that change nothing in `a` dropped, and list changes in key order. `Diff`
-  only produces diffs in normal form.
-- **Golden tests** of the generated `.proto` for the sample config above.
+  above, indexed lists included. `Equal(Apply(a, Diff(a, b)), b)` holds. For
+  any `d` that `Validate` accepts, `Diff(a, Apply(a, d))` is `d` in its normal
+  form for `a`. In normal form, entries that change nothing in `a` are dropped,
+  keyed list changes are in key order, and indexed edits are in index order,
+  an insert before a patch or remove at the same index. `Diff` only produces
+  diffs in normal form.
+- **Golden tests** of the generated `.proto` for the sample config above,
+  which has a keyed, an indexed and a replaced list.
 
 ## CI
 
@@ -406,9 +466,9 @@ goes to the Bazel Central Registry.
 - **The extension number.** 52000 is a placeholder on both extendees. A number
   should be registered in protobuf's global extension registry before v0.1.
   That is an outside step, for the owner.
-- **List order** (recommendation, pending the owner). Every keyed list states
-  `order`, and an ORDERED list's diff carries its complete final order when it
-  changes.
+- **Preconditions.** A diff applied to anything but its own base may apply
+  wrongly, most of all an indexed one. A general mechanism for stating what a
+  diff expects of its base could come later.
 - **Language rules.** That rules such as `go_proto_library` accept a
   `ProtoInfo` from a rule other than `proto_library` is to be confirmed in the
   first build.
