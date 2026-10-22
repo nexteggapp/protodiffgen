@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "schema",
+    srcs = ["schema.go"],
+    importpath = "github.com/nexteggapp/protodiffgen/internal/schema",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@org_golang_google_protobuf//encoding/protowire",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//reflect/protoregistry",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)

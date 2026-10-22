@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "protodiffgen_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/nexteggapp/protodiffgen/cmd/protodiffgen",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//generate",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)
+
+go_binary(
+    name = "protodiffgen",
+    embed = [":protodiffgen_lib"],
+    visibility = ["//visibility:public"],
+)

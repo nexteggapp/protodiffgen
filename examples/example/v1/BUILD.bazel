@@ -1,0 +1,19 @@
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_go//proto:def.bzl", "go_proto_library")
+
+exports_files(["team.proto"])
+
+# Imported as example/v1/team.proto, as in docs/design.md.
+proto_library(
+    name = "team_proto",
+    srcs = ["team.proto"],
+    strip_import_prefix = "/examples",
+    visibility = ["//examples:__subpackages__"],
+)
+
+go_proto_library(
+    name = "team_go_proto",
+    importpath = "example.com/team/v1/teampb",
+    proto = ":team_proto",
+    visibility = ["//examples:__subpackages__"],
+)
