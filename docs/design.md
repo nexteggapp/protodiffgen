@@ -61,95 +61,32 @@ It has three names, for three namespaces: the proto package
 ## The config
 
 The config is a proto in protodiffgen, written as textproto, kept outside the
-target's files.
+target's files. [`v1/config.proto`](../v1/config.proto) is the reference: it
+documents every field and value, and also declares the `change` and `field`
+options that generated messages carry. Its two config messages have these
+fields:
 
 ```proto
-// nextgui.xyz/protodiffgen/v1/config.proto
-syntax = "proto3";
-package nextgui.protodiffgen.v1;
-
-import "google/protobuf/descriptor.proto";
-
-option go_package = "github.com/nexteggapp/protodiffgen/v1;protodiffgenv1";
-
 message DiffConfig {
-  // The full name of the target, such as "example.v1.Team".
   string target_message = 1;
-  // The package the generated messages go in.
   string output_package = 2;
-  // Options for the generated file, such as go_package.
   google.protobuf.FileOptions file_options = 3;
-  // Message types always set whole, wherever they appear. Every
-  // google.protobuf type is atomic without being listed.
   repeated string atomic_types = 4;
-  // Singular fields, by full name, always set whole.
   repeated string atomic_fields = 5;
-  // One rule per repeated message field the target reaches.
   repeated ListRule lists = 6;
-  // The name of the generated field that lists cleared fields. Default "clear".
   string clear_field_name = 7;
 }
 
 message ListRule {
-  enum Strategy {
-    STRATEGY_UNSPECIFIED = 0;
-    // Items are matched by `key`.
-    KEYED = 1;
-    // Edits name positions in the base list.
-    INDEXED = 3;
-    // The list is set whole.
-    REPLACE = 2;
-  }
-  enum Order {
-    ORDER_UNSPECIFIED = 0;
-    // The items' order means something, and a diff can change it.
-    ORDERED = 1;
-    // The list is a set.
-    UNORDERED = 2;
-  }
-  // The repeated field's full name, such as "example.v1.Team.members".
   string field = 1;
   Strategy strategy = 2;
-  // For KEYED: a singular string, integer, bool or enum field of the item.
   string key = 3;
-  // Required for KEYED.
   Order order = 4;
 }
-
-// Where a generated message came from.
-message Change {
-  enum Kind {
-    KIND_UNSPECIFIED = 0;
-    PATCH = 1;
-    LIST_CHANGE = 2;
-    REPLACE = 3;
-    LIST_EDIT = 4;
-  }
-  // The full name of the message or field it diffs.
-  string source = 1;
-  Kind kind = 2;
-}
-
-// Where a generated field came from.
-message FieldSource {
-  // The full name of the source field.
-  string source = 1;
-  // This is a change wrapper's key.
-  bool key = 2;
-  // This holds a list's final key order.
-  bool order = 3;
-  // This is an indexed edit's base index.
-  bool index = 4;
-}
-
-// One placeholder number for both, until registered.
-extend google.protobuf.MessageOptions {
-  Change change = 52000;
-}
-extend google.protobuf.FieldOptions {
-  FieldSource field = 52000;
-}
 ```
+
+`Strategy` is `KEYED`, `INDEXED` or `REPLACE`, and `Order` is `ORDERED` or
+`UNORDERED`.
 
 The build fails when the config:
 
