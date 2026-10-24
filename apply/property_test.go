@@ -23,7 +23,7 @@ var (
 )
 
 // root returns the test schema's target and its patch body's plan.
-func root(t *testing.T) (protoreflect.MessageDescriptor, *plan) {
+func root(t testing.TB) (protoreflect.MessageDescriptor, *plan) {
 	t.Helper()
 	loadOnce.Do(func() { loaded, loadErr = testschema.Load() })
 	if loadErr != nil {
