@@ -13,7 +13,7 @@ import (
 )
 
 // parse returns a message of the test schema from text.
-func parse(t *testing.T, name protoreflect.FullName, s string) proto.Message {
+func parse(t testing.TB, name protoreflect.FullName, s string) proto.Message {
 	t.Helper()
 	root(t)
 	m := dynamicpb.NewMessage(loaded.Message(name))
@@ -23,8 +23,8 @@ func parse(t *testing.T, name protoreflect.FullName, s string) proto.Message {
 	return m
 }
 
-func rootOf(t *testing.T, s string) proto.Message { return parse(t, "pdgtest.v1.Root", s) }
-func diffOf(t *testing.T, s string) proto.Message { return parse(t, "pdgtest.v1.diff.RootDiff", s) }
+func rootOf(t testing.TB, s string) proto.Message { return parse(t, "pdgtest.v1.Root", s) }
+func diffOf(t testing.TB, s string) proto.Message { return parse(t, "pdgtest.v1.diff.RootDiff", s) }
 
 func TestValidateRefusals(t *testing.T) {
 	const base = `

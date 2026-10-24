@@ -2,6 +2,7 @@ package apply
 
 import (
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -30,10 +31,16 @@ func Validate(a, d proto.Message) error {
 	if err := checkData(p, am, "a"); err != nil {
 		return err
 	}
-	if path, ok := findUnknown(dm, "d"); ok {
+	return validateDiff(p, am, dm)
+}
+
+// validateDiff is Validate after a has been checked: it checks d alone,
+// then d against a.
+func validateDiff(p *plan, a, d protoreflect.Message) error {
+	if path, ok := findUnknown(d, "d"); ok {
 		return fmt.Errorf("%s has unknown fields", path)
 	}
-	return validate(p, am, dm, "d")
+	return validate(p, a, d, "d")
 }
 
 func validate(p *plan, a, d protoreflect.Message, where string) error {
@@ -276,10 +283,37 @@ func checkData(p *plan, m protoreflect.Message, where string) error {
 	if path, ok := findUnknown(m, where); ok {
 		return fmt.Errorf("%s has unknown fields", path)
 	}
-	return checkKeys(p, m, where)
+	if e := checkKeys(p, m); e != nil {
+		return e.at(where)
+	}
+	return nil
 }
 
-func checkKeys(p *plan, m protoreflect.Message, where string) error {
+// pathError is a check's failure below the message it was given. The path
+// to the failure is built only once there is one, as the check returns
+// through each step to it, so a message that passes costs no strings.
+type pathError struct {
+	steps []string // innermost first
+	msg   string
+}
+
+// under adds the step the failure is under.
+func (e *pathError) under(step string) *pathError {
+	e.steps = append(e.steps, step)
+	return e
+}
+
+// at is the failure as an error, its path starting from where.
+func (e *pathError) at(where string) error {
+	var b strings.Builder
+	b.WriteString(where)
+	for i := len(e.steps) - 1; i >= 0; i-- {
+		b.WriteString(e.steps[i])
+	}
+	return fmt.Errorf("%s: %s", b.String(), e.msg)
+}
+
+func checkKeys(p *plan, m protoreflect.Message) *pathError {
 	if p == nil {
 		return nil
 	}
@@ -289,54 +323,65 @@ func checkKeys(p *plan, m protoreflect.Message, where string) error {
 		if tfd == nil || !m.Has(tfd) {
 			continue
 		}
-		at := where + "." + string(tfd.Name())
+		var e *pathError
 		switch fp.kind {
 		case kPatch:
-			if err := checkKeys(fp.sub, m.Get(tfd).Message(), at); err != nil {
-				return err
-			}
+			e = checkKeys(fp.sub, m.Get(tfd).Message())
 		case kKeyed:
-			if tfd.IsMap() {
-				if fp.sub == nil {
-					continue
-				}
-				var err error
-				m.Get(tfd).Map().Range(func(k protoreflect.MapKey, v protoreflect.Value) bool {
-					err = checkKeys(fp.sub, v.Message(), fmt.Sprintf("%s[%v]", at, k.Interface()))
-					return err == nil
-				})
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			l := m.Get(tfd).List()
-			keyFd := tfd.Message().Fields().ByName(fp.keySrc)
-			seen := map[any]bool{}
-			for i := 0; i < l.Len(); i++ {
-				item := l.Get(i).Message()
-				if keyFd.HasPresence() && !item.Has(keyFd) {
-					return fmt.Errorf("%s[%d]: the key %s is unset", at, i, keyFd.Name())
-				}
-				k := keyOf(keyFd, item.Get(keyFd)).Interface()
-				if seen[k] {
-					return fmt.Errorf("%s: two items have the key %v", at, k)
-				}
-				seen[k] = true
-				if err := checkKeys(fp.sub, item, fmt.Sprintf("%s[%v]", at, k)); err != nil {
-					return err
-				}
-			}
+			e = checkKeyed(fp, tfd, m)
 		case kIndexed:
-			if fp.sub == nil {
-				continue
+			e = checkIndexed(fp, m.Get(tfd).List())
+		}
+		if e != nil {
+			return e.under("." + string(tfd.Name()))
+		}
+	}
+	return nil
+}
+
+// checkKeyed checks a keyed list's or map's items.
+func checkKeyed(fp *fplan, tfd protoreflect.FieldDescriptor, m protoreflect.Message) *pathError {
+	if tfd.IsMap() {
+		if fp.sub == nil {
+			return nil
+		}
+		var e *pathError
+		m.Get(tfd).Map().Range(func(k protoreflect.MapKey, v protoreflect.Value) bool {
+			if e = checkKeys(fp.sub, v.Message()); e != nil {
+				e.under(fmt.Sprintf("[%v]", k.Interface()))
 			}
-			l := m.Get(tfd).List()
-			for i := 0; i < l.Len(); i++ {
-				if err := checkKeys(fp.sub, l.Get(i).Message(), fmt.Sprintf("%s[%d]", at, i)); err != nil {
-					return err
-				}
-			}
+			return e == nil
+		})
+		return e
+	}
+	l := m.Get(tfd).List()
+	keyFd := tfd.Message().Fields().ByName(fp.keySrc)
+	seen := make(map[any]bool, l.Len())
+	for i := 0; i < l.Len(); i++ {
+		item := l.Get(i).Message()
+		if keyFd.HasPresence() && !item.Has(keyFd) {
+			return (&pathError{msg: fmt.Sprintf("the key %s is unset", keyFd.Name())}).under(fmt.Sprintf("[%d]", i))
+		}
+		k := keyOf(keyFd, item.Get(keyFd)).Interface()
+		if seen[k] {
+			return &pathError{msg: fmt.Sprintf("two items have the key %v", k)}
+		}
+		seen[k] = true
+		if e := checkKeys(fp.sub, item); e != nil {
+			return e.under(fmt.Sprintf("[%v]", k))
+		}
+	}
+	return nil
+}
+
+// checkIndexed checks an indexed list's items.
+func checkIndexed(fp *fplan, l protoreflect.List) *pathError {
+	if fp.sub == nil {
+		return nil
+	}
+	for i := 0; i < l.Len(); i++ {
+		if e := checkKeys(fp.sub, l.Get(i).Message()); e != nil {
+			return e.under(fmt.Sprintf("[%d]", i))
 		}
 	}
 	return nil
@@ -345,33 +390,53 @@ func checkKeys(p *plan, m protoreflect.Message, where string) error {
 // findUnknown returns the path of the first message under m with unknown
 // fields.
 func findUnknown(m protoreflect.Message, where string) (string, bool) {
-	if len(m.GetUnknown()) > 0 {
-		return where, true
+	e := unknownIn(m)
+	if e == nil {
+		return "", false
 	}
-	var path string
-	var found bool
+	var b strings.Builder
+	b.WriteString(where)
+	for i := len(e.steps) - 1; i >= 0; i-- {
+		b.WriteString(e.steps[i])
+	}
+	return b.String(), true
+}
+
+// unknownIn returns the steps to the first message under m with unknown
+// fields, or nil.
+func unknownIn(m protoreflect.Message) *pathError {
+	if len(m.GetUnknown()) > 0 {
+		return &pathError{}
+	}
+	var e *pathError
 	m.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		at := where + "." + string(fd.Name())
 		switch {
 		case fd.IsMap():
 			if fd.MapValue().Message() == nil {
 				return true
 			}
 			v.Map().Range(func(k protoreflect.MapKey, mv protoreflect.Value) bool {
-				path, found = findUnknown(mv.Message(), fmt.Sprintf("%s[%v]", at, k.Interface()))
-				return !found
+				if e = unknownIn(mv.Message()); e != nil {
+					e.under(fmt.Sprintf("[%v]", k.Interface()))
+				}
+				return e == nil
 			})
 		case fd.IsList():
 			if fd.Message() == nil {
 				return true
 			}
-			for i := 0; i < v.List().Len() && !found; i++ {
-				path, found = findUnknown(v.List().Get(i).Message(), fmt.Sprintf("%s[%d]", at, i))
+			for i := 0; i < v.List().Len() && e == nil; i++ {
+				if e = unknownIn(v.List().Get(i).Message()); e != nil {
+					e.under(fmt.Sprintf("[%d]", i))
+				}
 			}
 		case fd.Message() != nil:
-			path, found = findUnknown(v.Message(), at)
+			e = unknownIn(v.Message())
 		}
-		return !found
+		if e != nil {
+			e.under("." + string(fd.Name()))
+		}
+		return e == nil
 	})
-	return path, found
+	return e
 }

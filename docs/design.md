@@ -345,6 +345,15 @@ func Apply(a, d proto.Message) (proto.Message, error)
 // Validate reports whether d can be applied to a.
 func Validate(a, d proto.Message) error
 
+// Target is a message checked once as the target of one diff type's diffs.
+// Target.Apply validates only the diff, where Apply and Validate check the
+// whole target on every call, and returns a Target. Its message is held, not
+// copied, and must not be changed.
+type Target struct{ ... }
+func NewTarget(a proto.Message, diff protoreflect.MessageDescriptor) (Target, error)
+func (t Target) Message() proto.Message
+func (t Target) Apply(d proto.Message) (Target, error)
+
 // Overlap lists where two diffs of one base both change something.
 func Overlap(d1, d2 proto.Message) ([]Item, error)
 
