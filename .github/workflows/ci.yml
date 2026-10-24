@@ -5,13 +5,18 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  # bazel test also runs //examples:write_team_diff_test, which fails when
+  # the checked-in examples/team_diff.proto is stale.
   bazel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Restore the Bazel disk cache
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/bazel-disk
           key: bazel-disk-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'go.sum') }}-${{ github.sha }}
@@ -25,13 +30,92 @@ jobs:
   go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.25"
-      - name: gofmt
-        run: test -z "$(gofmt -l .)"
-      - name: go vet ./...
-        run: go vet ./...
       - name: go test ./...
         run: go test ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # staticcheck must be built with the Go it checks against. 2026.2
+      # supports Go 1.27.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27"
+      - name: gofmt -l .
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "These files need gofmt:"
+            echo "$out"
+            exit 1
+          fi
+      - name: go vet ./...
+        run: go vet ./...
+      - name: staticcheck ./...
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.2 # 2026.2.2
+          "$(go env GOPATH)/bin/staticcheck" ./...
+      # Fails and prints the diff if go.mod or go.sum is not tidy.
+      - name: go mod tidy
+        run: go mod tidy -diff
+
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.25"
+      - name: go test -race ./...
+        run: go test -race ./...
+
+  go-versions:
+    name: go-versions (${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The go line in go.mod.
+          - go: oldest
+            version-file: go.mod
+          - go: latest
+            version: stable
+    env:
+      # Use the installed Go, not a newer toolchain that go.mod asks for.
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.version }}
+          go-version-file: ${{ matrix.version-file }}
+      - run: go version
+      - name: go test ./...
+        run: go test ./...
+
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # buf breaking reads the base commit from the local history.
+          fetch-depth: 0
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
+        with:
+          version: 1.75.0
+          setup_only: true
+      - name: buf lint
+        run: buf lint
+      # The base is read with this branch's buf.yaml, so both sides use the
+      # same module layout.
+      - name: buf breaking
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: buf breaking --against ".git#ref=$BASE_SHA" --against-config buf.yaml
