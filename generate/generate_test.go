@@ -288,8 +288,7 @@ func checkDocumented(t *testing.T, fd protoreflect.FileDescriptor) {
 			t.Errorf("%s: %s has no doc comment", fd.Path(), d.FullName())
 		}
 	}
-	var enums func(protoreflect.EnumDescriptors)
-	enums = func(es protoreflect.EnumDescriptors) {
+	enums := func(es protoreflect.EnumDescriptors) {
 		for i := 0; i < es.Len(); i++ {
 			check(es.Get(i))
 			for j := 0; j < es.Get(i).Values().Len(); j++ {
