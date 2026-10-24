@@ -1,0 +1,32 @@
+# buf lint and buf breaking for the hand-written .proto files. The generated
+# examples/team_diff.proto is left out.
+version: v2
+modules:
+  - path: v1
+  - path: examples
+    includes:
+      - examples/example
+  - path: internal/testschema/proto
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    # config.proto is imported as nextgui.xyz/protodiffgen/v1/config.proto,
+    # which Bazel sets with import_prefix.
+    PACKAGE_DIRECTORY_MATCH:
+      - v1/config.proto
+    # The enum value names are the config's textproto and JSON names.
+    ENUM_VALUE_PREFIX:
+      - v1/config.proto
+    # The test schema has closed enums with no zero value on purpose.
+    ENUM_FIRST_VALUE_ZERO:
+      - internal/testschema/proto/pdgtest/v1/legacy.proto
+      - internal/testschema/proto/pdgtest/v1/modern.proto
+breaking:
+  use:
+    - WIRE_JSON
+  # Only config.proto is public API. The example and the test schema may
+  # change freely.
+  ignore:
+    - examples/example
+    - internal/testschema/proto
