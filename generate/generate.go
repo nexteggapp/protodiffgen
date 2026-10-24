@@ -17,8 +17,6 @@ import (
 	"github.com/nexteggapp/protodiffgen/internal/schema"
 )
 
-const emptyPath = "google/protobuf/empty.proto"
-
 // File returns the diff .proto for the target a DiffConfig names. set holds
 // the target's file and every file it imports; config is the DiffConfig in
 // text format. A mistake in the config is returned as an error that names
