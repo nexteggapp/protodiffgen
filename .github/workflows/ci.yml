@@ -15,17 +15,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Restore the Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # MODULE.bazel.lock is not checked in, so the key uses MODULE.bazel and
+      # go.sum. Pull requests restore main's cache but do not save their own.
+      - name: Restore the Bazel caches
+        id: restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/bazel-disk
-          key: bazel-disk-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'go.sum') }}-${{ github.sha }}
+          path: |
+            ~/.cache/bazel-disk
+            ~/.cache/bazel-repo
+          key: bazel-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'go.sum') }}-${{ github.sha }}
           restore-keys: |
-            bazel-disk-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'go.sum') }}-
-            bazel-disk-${{ runner.os }}-
-      # The runner's bazelisk reads .bazelversion.
+            bazel-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel', 'go.sum') }}-
+            bazel-${{ runner.os }}-
+      # The runner's bazelisk reads .bazelversion. The repository cache holds
+      # downloads such as the Go SDK and protoc. The disk cache is trimmed to
+      # 1 GB after the build so the saved cache does not keep growing.
       - name: bazel test //...
-        run: bazelisk test --disk_cache="$HOME/.cache/bazel-disk" //...
+        run: >-
+          bazelisk test
+          --disk_cache="$HOME/.cache/bazel-disk"
+          --repository_cache="$HOME/.cache/bazel-repo"
+          --experimental_disk_cache_gc_max_size=1G
+          --experimental_disk_cache_gc_idle_delay=0s
+          //...
+      # Waits for the disk cache trim to finish before the save.
+      - name: Stop Bazel
+        run: bazelisk shutdown
+      - name: Save the Bazel caches
+        if: github.event_name == 'push'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/bazel-disk
+            ~/.cache/bazel-repo
+          key: ${{ steps.restore.outputs.cache-primary-key }}
 
   go:
     runs-on: ubuntu-latest
